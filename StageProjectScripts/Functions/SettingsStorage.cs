@@ -1,34 +1,10 @@
 ﻿using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 
-using System;
-using System.ComponentModel;
-using System.IO;
-
-using System.Xml.Serialization;
-
 namespace StageProjectScripts.Functions;
 internal static class SettingsStorage
 {
-    private static string fileName = "CityParameters.xml";
-    private static XmlSerializer serializer = new(typeof(BindingList<CityModel>));
-    internal static void SaveCityParameters()
-    {
-        StreamWriter myWriter = new(fileName);
-        serializer.Serialize(myWriter, Variables.cityList);
-        myWriter.Close();
-    }
-    internal static void ReadCityParameters()
-    {
-        if (File.Exists(fileName))
-        {
-            using (Stream reader = new FileStream(fileName, FileMode.Open))
-            {
-                Variables.cityList = (BindingList<CityModel>)serializer.Deserialize(reader);
-            }
-        }
-    }
-    internal static void SaveCity(string cityName)
+    internal static void SaveData(string xRefName, string plotsName, string plotNumber)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -36,21 +12,25 @@ internal static class SettingsStorage
         {
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
-                db.SetCustomProperty("Город", cityName);
+                db.SetCustomProperty("Основа", xRefName);
+                db.SetCustomProperty("Границы", plotsName);
+                db.SetCustomProperty("ГПЗУ", plotNumber);
                 tr.Commit();
             }
         }
     }
-    internal static string ReadCity()
+    internal static string[] ReadData()
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
-        string cityName = "";
+        string[] cityName = new string[3];
         using (Transaction tr = db.TransactionManager.StartTransaction())
         {
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
-                cityName = db.GetCustomProperty("Город");
+                cityName[0] = db.GetCustomProperty("Основа");
+                cityName[1] = db.GetCustomProperty("Границы");
+                cityName[2] = db.GetCustomProperty("ГПЗУ");
                 tr.Commit();
             }
         }

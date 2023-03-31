@@ -15,138 +15,123 @@ namespace StageProjectScripts.Functions;
 
 internal static class DataImport
 {
-    public static List<T> GetAllElementsOfTypeInDrawing<T>(string xrefName = null, bool everywhere = false) where T : Entity
+    public static List<T> GetAllElementsOfTypeInDrawing<T>(Transaction tr, string xrefName = null, bool everywhere = false) where T : Entity
     {
         List<T> output = new();
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
         var xrefList = new List<XrefGraphNode>();
         var btrList = new List<BlockTableRecord>();
-        using (DocumentLock lk = doc.LockDocument())
+        var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+        if (everywhere)
         {
-            using (Transaction tr = db.TransactionManager.StartTransaction())
+            XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
+            for (int i = 1; i < XrGraph.NumNodes; i++)
             {
-                var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-                if (everywhere)
+                xrefList.Add(XrGraph.GetXrefNode(i));
+            }
+            btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+        }
+        else if (xrefName != null)
+        {
+            XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
+            for (int i = 0; i < XrGraph.NumNodes; i++)
+            {
+                XrefGraphNode XrNode = XrGraph.GetXrefNode(i);
+                if (XrNode.Name == xrefName)
                 {
-                    XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
-                    for (int i = 1; i < XrGraph.NumNodes; i++)
-                    {
-                        xrefList.Add(XrGraph.GetXrefNode(i));
-                    }
-                    btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+                    xrefList.Add(XrNode);
+                    break;
                 }
-                else if (xrefName != null)
+            }
+        }
+        if (xrefList.Count == 0)
+        {
+            var bTr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+            foreach (var item in bTr)
+            {
+                if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(T))))
                 {
-                    XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
-                    for (int i = 0; i < XrGraph.NumNodes; i++)
-                    {
-                        XrefGraphNode XrNode = XrGraph.GetXrefNode(i);
-                        if (XrNode.Name == xrefName)
-                        {
-                            xrefList.Add(XrNode);
-                            break;
-                        }
-                    }
+                    output.Add((T)tr.GetObject(item, OpenMode.ForRead));
                 }
-                if (xrefList.Count == 0)
+            }
+        }
+        else
+        {
+            foreach (var xref in xrefList)
+            {
+                btrList.Add((BlockTableRecord)tr.GetObject(xref.BlockTableRecordId, OpenMode.ForRead));
+            }
+            foreach (var btr in btrList)
+            {
+                foreach (var item in btr)
                 {
-                    var bTr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead);
-                    foreach (var item in bTr)
+                    if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(T))))
                     {
-                        if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(T))))
-                        {
-                            output.Add((T)tr.GetObject(item, OpenMode.ForRead));
-                        }
-                    }
-                }
-                else
-                {
-                    foreach (var xref in xrefList)
-                    {
-                        btrList.Add((BlockTableRecord)tr.GetObject(xref.BlockTableRecordId, OpenMode.ForRead));
-                    }
-                    foreach (var btr in btrList)
-                    {
-                        foreach (var item in btr)
-                        {
-                            if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(T))))
-                            {
-                                output.Add((T)tr.GetObject(item, OpenMode.ForRead));
-                            }
-                        }
+                        output.Add((T)tr.GetObject(item, OpenMode.ForRead));
                     }
                 }
-                tr.Commit();
             }
         }
         return output;
     }
-    public static List<T> GetAllElementsOfTypeOnLayer<T>(string layer, string xrefName = null, bool everywhere = false) where T : Entity
+    public static List<T> GetAllElementsOfTypeOnLayer<T>(Transaction tr, string layer, string xrefName = null, bool everywhere = false) where T : Entity
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
         List<T> output = new();
         var xrefList = new List<XrefGraphNode>();
         var btrList = new List<BlockTableRecord>();
-        using (DocumentLock lk = doc.LockDocument())
+        var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+        if (everywhere)
         {
-            using (Transaction tr = db.TransactionManager.StartTransaction())
+            XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
+            for (int i = 1; i < XrGraph.NumNodes; i++)
             {
-                var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-                if (everywhere)
+                xrefList.Add(XrGraph.GetXrefNode(i));
+            }
+            btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+        }
+        else if (xrefName != null)
+        {
+            XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
+            for (int i = 0; i < XrGraph.NumNodes; i++)
+            {
+                XrefGraphNode XrNode = XrGraph.GetXrefNode(i);
+                if (XrNode.Name == xrefName)
                 {
-                    XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
-                    for (int i = 1; i < XrGraph.NumNodes; i++)
-                    {
-                        xrefList.Add(XrGraph.GetXrefNode(i));
-                    }
-                    btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+                    xrefList.Add(XrNode);
+                    break;
                 }
-                else if (xrefName != null)
-                {
-                    XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
-                    for (int i = 0; i < XrGraph.NumNodes; i++)
-                    {
-                        XrefGraphNode XrNode = XrGraph.GetXrefNode(i);
-                        if (XrNode.Name == xrefName)
-                        {
-                            xrefList.Add(XrNode);
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
-                }
+            }
+        }
+        else
+        {
+            btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+        }
 
-                foreach (var xref in xrefList)
+        foreach (var xref in xrefList)
+        {
+            btrList.Add((BlockTableRecord)tr.GetObject(xref.BlockTableRecordId, OpenMode.ForRead));
+        }
+        foreach (var btr in btrList)
+        {
+            foreach (var item in btr)
+            {
+                if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(T))))
                 {
-                    btrList.Add((BlockTableRecord)tr.GetObject(xref.BlockTableRecordId, OpenMode.ForRead));
-                }
-                foreach (var btr in btrList)
-                {
-                    foreach (var item in btr)
+                    var entity = (T)tr.GetObject(item, OpenMode.ForRead);
+                    if (entity.Layer.Contains(layer))
                     {
-                        if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(T))))
-                        {
-                            var entity = (T)tr.GetObject(item, OpenMode.ForRead);
-                            if (entity.Layer.Contains(layer))
-                            {
-                                output.Add(entity);
-                            }
-                        }
+                        output.Add(entity);
                     }
                 }
-
-                tr.Commit();
             }
         }
         return output;
     }
     //Method to get all layer names containing provided string
-    public static List<string> GetAllLayersContainingString(string str)
+    public static List<string> GetAllLayersContainingString(string str, string xRef = null)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -156,12 +141,13 @@ internal static class DataImport
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
                 LayerTable lt = (LayerTable)tr.GetObject(db.LayerTableId, OpenMode.ForRead);
+                string fullStr = xRef != null ? xRef + '|' + str : str;
                 foreach (ObjectId item in lt)
                 {
                     LayerTableRecord layer = (LayerTableRecord)tr.GetObject(item, OpenMode.ForRead);
-                    if (layer.Name.Contains(str))
+                    if (layer.Name.Contains(fullStr))
                     {
-                        output.Add(layer.Name);
+                        output.Add(layer.Name.Replace(fullStr, ""));
                     }
                 }
             }
@@ -177,102 +163,27 @@ internal static class DataImport
         PromptPointOptions pPtOpts = new("\nВыберете точку положения таблицы: ");
         return ed.GetPoint(pPtOpts).Value;
     }
-    //Getting building models expand to allow xref and all options?
-    public static List<ApartmentBuildingModel> GetApartmentBuildings(CityModel city, List<ZoneBorderModel> zoneBorders, List<ParkingModel> exParking)
-    {
-        List<ApartmentBuildingModel> output = new();
-        Document doc = Application.DocumentManager.MdiActiveDocument;
-        Database db = doc.Database;
-        using (DocumentLock lk = doc.LockDocument())
-        {
-            using (Transaction tr = db.TransactionManager.StartTransaction())
-            {
-                var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-                var bTr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead);
-                foreach (var item in bTr)
-                {
-                    if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(BlockReference))))
-                    {
-                        var br = (BlockReference)tr.GetObject(item, OpenMode.ForRead);
-                        if (br.Layer == Variables.apartmentsBuildingsLayer)
-                        {
-                            string[] dynBlockPropValues = new string[9];
-                            DynamicBlockReferencePropertyCollection pc = br.DynamicBlockReferencePropertyCollection;
-                            for (int i = 0; i < dynBlockPropValues.Length; i++)
-                            {
-                                dynBlockPropValues[i] = pc[i].Value.ToString();
-                            }
-                            Point3d midPoint = DataProcessing.GetCenterOfABlock(br);
-                            output.Add(new ApartmentBuildingModel(city, dynBlockPropValues, zoneBorders.First(x => x.Name == dynBlockPropValues[1]), exParking.First(x => x.Name == dynBlockPropValues[1]), midPoint));
-                        }
-                    }
-                }
-                tr.Commit();
-            }
-        }
-        return output;
-    }
-    //Getting parkingbuilding models expand to allow xref and all options?
-    public static List<ParkingBuildingModel> GetParkingBuildings(CityModel city, List<ZoneBorderModel> zoneBorders, List<ParkingModel> exParking)
-    {
-        List<ParkingBuildingModel> output = new();
-        Document doc = Application.DocumentManager.MdiActiveDocument;
-        Database db = doc.Database;
-        using (DocumentLock lk = doc.LockDocument())
-        {
-            using (Transaction tr = db.TransactionManager.StartTransaction())
-            {
-                var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-                var bTr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead);
-                foreach (var item in bTr)
-                {
-                    if (item.ObjectClass.IsDerivedFrom(Variables.rxClassBlockReference))
-                    {
-                        var br = (BlockReference)tr.GetObject(item, OpenMode.ForRead);
-                        if (br.Layer == Variables.parkingBuildingsLayer)
-                        {
-                            string[] dynBlockPropValues = new string[8];
-                            DynamicBlockReferencePropertyCollection pc = br.DynamicBlockReferencePropertyCollection;
-                            for (int i = 0; i < dynBlockPropValues.Length; i++)
-                            {
-                                dynBlockPropValues[i] = pc[i].Value.ToString();
-                            }
-                            Point3d midPoint = DataProcessing.GetCenterOfABlock(br);
-                            output.Add(new ParkingBuildingModel(city, dynBlockPropValues, zoneBorders.First(c => c.Name == dynBlockPropValues[1]), midPoint));
-                        }
-                    }
-                }
-                tr.Commit();
-            }
-        }
-        return output;
-    }
+
     //Method to get all attributes from a block
-    public static List<Dictionary<string, string>> GetAllAttributesFromBlockReferences(List<BlockReference> brList)
+    public static List<Dictionary<string, string>> GetAllAttributesFromBlockReferences(Transaction tr, List<BlockReference> brList)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
         var output = new List<Dictionary<string, string>>();
-        using (Transaction tr = db.TransactionManager.StartTransaction())
+        for (var i = 0; i < brList.Count; i++)
         {
-            using (DocumentLock acLckDoc = doc.LockDocument())
+            output.Add(new Dictionary<string, string>());
+            foreach (ObjectId id in brList[i].AttributeCollection)
             {
-                for (var i = 0; i < brList.Count; i++)
-                {
-                    output.Add(new Dictionary<string, string>());
-                    foreach (ObjectId id in brList[i].AttributeCollection)
-                    {
-                        // open the attribute reference
-                        var attRef = (AttributeReference)tr.GetObject(id, OpenMode.ForRead);
-                        //Adding it to dictionary
-                        output[i].Add(attRef.Tag, attRef.TextString);
-                    }
-                }
+                // open the attribute reference
+                var attRef = (AttributeReference)tr.GetObject(id, OpenMode.ForRead);
+                //Adding it to dictionary
+                output[i].Add(attRef.Tag, attRef.TextString);
             }
-            tr.Commit();
         }
         return output;
     }
+    //Getting all xRefs for GUI
     internal static List<string> GetXRefList()
     {
         List<string> output = new();

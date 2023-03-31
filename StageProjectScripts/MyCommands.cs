@@ -1,12 +1,6 @@
-﻿using Autodesk.AutoCAD.ApplicationServices;
-using Autodesk.AutoCAD.DatabaseServices;
-using Autodesk.AutoCAD.EditorInput;
-using Autodesk.AutoCAD.Geometry;
-using Autodesk.AutoCAD.Runtime;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Autodesk.AutoCAD.Runtime;
+
+using StageProjectScripts.Forms;
 
 [assembly: CommandClass(typeof(StageProjectScripts.MyCommands))]
 
@@ -14,10 +8,12 @@ namespace StageProjectScripts
 {
     internal class MyCommands
     {
-        [CommandMethod("Command")]
-        static public void Command()
+        [CommandMethod("StageProjectScripts")]
+        static public void StageProjectScripts()
         {
-
+            Variables.savedData = Functions.SettingsStorage.ReadData();
+            var MW = new MainWindow();
+            MW.Show();
         }
     }
 }
