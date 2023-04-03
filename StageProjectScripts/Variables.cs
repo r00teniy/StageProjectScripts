@@ -33,6 +33,7 @@ namespace StageProjectScripts
         internal static long tpl = Convert.ToInt64("78E16", 16); //Table handle for polylines for length
         internal static long tpa = Convert.ToInt64("88C28", 16); //Table handle for polylines for area
         internal static long tb = Convert.ToInt64("78E73", 16); //Table handle for blocks
-
+        //Temporary
+        internal static int[] curbLineCount = { 2, 1, 2, 2, 1, 1, 2, 1, 2, 2 };
     }
 }

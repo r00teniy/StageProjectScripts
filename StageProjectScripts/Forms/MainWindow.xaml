@@ -5,12 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:StageProjectScripts.Forms"
         mc:Ignorable="d"
-        Title="Работа со стадией П" FontSize="18" Height="300" Width="600">
+        Title="Работа со стадией П" FontSize="18" Height="300" Width="600" Topmost="True">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="13*"/>
+            <ColumnDefinition Width="37*"/>
+            <ColumnDefinition Width="25*"/>
+            <ColumnDefinition Width="25*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -20,39 +21,45 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <!-- Row 0-->
+        <Label Content="Данные для работы скриптов:"
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center"
+               Grid.Row="0" 
+               Grid.Column="1"
+               Grid.ColumnSpan="2"/>
         <!-- Row 1-->
         <Label Content="Выберите файл основы: "
                VerticalAlignment="Center"
-               HorizontalAlignment="Right"
-               Margin="5"
-               Grid.Row="1"/>
+               HorizontalAlignment="Center"
+               Grid.Row="1" Grid.Column="1"/>
         <ComboBox x:Name="baseXRefComboBox"
                   Grid.Row="1"
-                  Grid.Column="1"
+                  Grid.Column="2"
                   Grid.ColumnSpan="2"
                   FontSize="18"
                   Margin="10,5,10,5"/>
         <!-- Row 2-->
         <Label Content="Выберите файл границ: "
                VerticalAlignment="Center"
-               HorizontalAlignment="Right"
-               Margin="5"
-               Grid.Row="2"/>
+               HorizontalAlignment="Left"
+               Margin="8,0,0,0"
+               Grid.Row="2" Grid.Column="1"/>
         <ComboBox x:Name="plotsXRefComboBox"
                   SelectionChanged="plotsXRefComboBox_SelectionChanged"
                   Grid.Row="2"
-                  Grid.Column="1"
+                  Grid.Column="2"
                   Grid.ColumnSpan="2"
                   Margin="10,5,10,5"/>
         <!-- Row 3-->
         <Label Content="Выберите номер участка ГПЗУ: "
                VerticalAlignment="Center"
-               HorizontalAlignment="Right"
-               Margin="5"
-               Grid.Row="3"/>
+               HorizontalAlignment="Left"
+               Margin="24,0,0,0"
+               Grid.Row="3" Grid.ColumnSpan="2"/>
         <ComboBox x:Name="plotsComboBox"
                   Grid.Row="3"
-                  Grid.Column="1"
+                  Grid.Column="2"
                   Grid.ColumnSpan="2"
                   Margin="10,5,10,5"/>
         <!-- Row 4-->
@@ -60,22 +67,22 @@
                 Click="CalculateButton_Click"
                 Content="Рассчитать объёмы"
                 Grid.Row="4"
-                Margin="10,5,10,5"/>
+                Margin="10,5,10,5" Grid.ColumnSpan="2"/>
         <Button x:Name="CheckHatch"
                 Content="Проверить штриховки"
                 Grid.Row="4"
-                Grid.Column="1"
+                Grid.Column="2"
                 Grid.ColumnSpan="2"
                 Margin="10,5,10,5"/>
         <!-- Row 5-->
         <Button x:Name="LabelPavement"
                 Grid.Row="5"
                 Content="Подписать покрытия"
-                Margin="10,5,10,5"/>
+                Margin="10,5,10,5" Grid.ColumnSpan="2"/>
         <Button x:Name="LabelGreenery"
                 Content="Подписать озеленение"
                 Grid.Row="5"
-                Grid.Column="1"
+                Grid.Column="2"
                 Grid.ColumnSpan="2"
                 Margin="10,5,10,5"/>
     </Grid>

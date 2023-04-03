@@ -48,7 +48,10 @@ namespace StageProjectScripts.Forms
 
         private void CalculateButton_Click(object sender, RoutedEventArgs e)
         {
-            Functions.SettingsStorage.SaveData(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+            this.Hide();
+            DataProcessing.CalculateVolumes(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+            SettingsStorage.SaveData(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+            this.Show();
         }
     }
 }

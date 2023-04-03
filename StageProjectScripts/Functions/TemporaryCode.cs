@@ -1,17 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
-
-using Autodesk.AutoCAD.ApplicationServices;
-using Autodesk.AutoCAD.DatabaseServices;
-
-using Autodesk.AutoCAD.EditorInput;
-
-namespace StageProjectScripts.Functions
+﻿namespace StageProjectScripts.Functions
 {
     internal static class TemporaryCode
     {
-        public static void DoCount(string X, int a, int b, int c)
+        /*public static void DoCount(string X, int a, int b, int c)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
@@ -244,6 +235,6 @@ namespace StageProjectScripts.Functions
                     trans.Commit();
                 }
             }
-        }
+        }*/
     }
 }
