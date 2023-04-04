@@ -20,7 +20,7 @@ namespace StageProjectScripts
         internal static string[] laylistBlockCount = { "51_Деревья", "52_Кустарники" };
         internal static string[] laylistBlockWithParams = { "12_Тактильная_плитка" };
         //Block details names
-        internal static List<string>[] blockDetailsParameters = { new List<string> { "Тип", "Длина" } };
+        internal static List<string>[] blockDetailsParameters = { new List<string> { "Тип", "0", "Длина", "1" } };
         internal static List<string>[] blockDetailsParametersVariants = { new List<string> { "Линии вдоль", "Линии поперек", "Конусы шахматный", "Конусы квадрат", "1 Линия", "2 Линии", "Шуцлиния" } };
         //Layer for pavement labels
         internal static string pLabelLayer = "32_Подписи_покрытий";

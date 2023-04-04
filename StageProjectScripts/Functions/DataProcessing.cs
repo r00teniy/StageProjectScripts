@@ -186,14 +186,15 @@ namespace StageProjectScripts.Functions
                         System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
                     }
                     //Collecting data for blocks with params table
-                    /*try
+                    try
                     {
                         //Counting blocks with parameters
                         List<BlockReference>[] blocksWithParams = new List<BlockReference>[Variables.laylistBlockWithParams.Length];
                         for (var i = 0; i < Variables.laylistBlockWithParams.Length; i++)
                         {
-                            blocksWithParams[i] = DataImport.GetAllElementsOfTypeOnLayer<BlockReference>(tr, Variables.laylistBlockWithParams[i], xRef);
+                            blocksWithParams[i] = DataImport.GetAllElementsOfTypeOnLayer<BlockReference>(tr, Variables.laylistBlockWithParams[i]);
                         }
+                        var paramTableRow = 0;
                         for (var i = 0; i < Variables.laylistBlockWithParams.Length; i++)
                         {
                             var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotBorder, blocksWithParams[i]);
@@ -203,22 +204,30 @@ namespace StageProjectScripts.Functions
                                 if (br != null && br.IsDynamicBlock)
                                 {
                                     DynamicBlockReferencePropertyCollection pc = br.DynamicBlockReferencePropertyCollection;
-                                    for (int k = 0; k < Variables.blockDetailsParametersVariants[i].Count; k++)
+                                    //Checking if it has correct properties in correct places
+                                    if ((pc[Convert.ToInt32(Variables.blockDetailsParameters[i][1])].PropertyName == Variables.blockDetailsParameters[i][0]) && (Variables.blockDetailsParameters[i][2] == "-" || pc[Convert.ToInt32(Variables.blockDetailsParameters[i][3])].PropertyName == Variables.blockDetailsParameters[i][2]))
                                     {
-                                        if (pc[0].Value.ToString() == Variables.blockDetailsParametersVariants[i][k])
+                                        for (int k = 0; k < Variables.blockDetailsParametersVariants[i].Count; k++)
                                         {
-
+                                            //Checking for property value to determine table row
+                                            if (pc[Convert.ToInt32(Variables.blockDetailsParameters[i][1])].Value.ToString() == Variables.blockDetailsParametersVariants[i][k])
+                                            {
+                                                var amount = Variables.blockDetailsParameters[i][2] == "-" ? 1 : Convert.ToDouble(pc[Convert.ToInt32(Variables.blockDetailsParameters[i][3])].Value);
+                                                paramBlocksModelList.Add(new DataElementModel(amount, paramTableRow + k, areBlocksInside[j]));
+                                            }
                                         }
                                     }
                                 }
                             }
+                            paramTableRow += Variables.blockDetailsParametersVariants[i].Count;
                         }
+                        //Filling blocks with parameters table
+                        DataExport.FillTableWithData(tr, paramBlocksModelList, Variables.tbp, paramTableRow, "0.##");
                     }
                     catch (System.Exception ex)
                     {
                         System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
-                        throw;
-                    }*/
+                    }
                     tr.Commit();
                 }
             }
