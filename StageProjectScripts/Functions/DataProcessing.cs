@@ -25,6 +25,8 @@ namespace StageProjectScripts.Functions
             List<DataElementModel> hatchModelList = new();
             List<DataElementModel> plineLengthModelList = new();
             List<DataElementModel> plineAreaModelList = new();
+            List<DataElementModel> normalBlocksModelList = new();
+            List<DataElementModel> paramBlocksModelList = new();
             Polyline plotBorder;
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
@@ -161,7 +163,62 @@ namespace StageProjectScripts.Functions
                     {
                         System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
                     }
-                    //Collecting data for blocks table
+                    //Collecting data for normal blocks table
+                    try
+                    {
+                        //Counting normal blocks
+                        List<BlockReference>[] blocksNormal = new List<BlockReference>[Variables.laylistBlockCount.Length];
+                        for (var i = 0; i < Variables.laylistBlockCount.Length; i++)
+                        {
+                            blocksNormal[i] = DataImport.GetAllElementsOfTypeOnLayer<BlockReference>(tr, Variables.laylistBlockCount[i]);
+                        }
+                        for (var i = 0; i < Variables.laylistBlockCount.Length; i++)
+                        {
+                            var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotBorder, blocksNormal[i]);
+                            normalBlocksModelList.Add(new DataElementModel(areBlocksInside.Where(x => x == true).Count(), i, true));
+                            normalBlocksModelList.Add(new DataElementModel(areBlocksInside.Where(x => x == false).Count(), i, false));
+                        }
+                        //Filling Normal blocks table
+                        DataExport.FillTableWithData(tr, normalBlocksModelList, Variables.tbn, Variables.laylistBlockCount.Length, "0");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
+                    }
+                    //Collecting data for blocks with params table
+                    /*try
+                    {
+                        //Counting blocks with parameters
+                        List<BlockReference>[] blocksWithParams = new List<BlockReference>[Variables.laylistBlockWithParams.Length];
+                        for (var i = 0; i < Variables.laylistBlockWithParams.Length; i++)
+                        {
+                            blocksWithParams[i] = DataImport.GetAllElementsOfTypeOnLayer<BlockReference>(tr, Variables.laylistBlockWithParams[i], xRef);
+                        }
+                        for (var i = 0; i < Variables.laylistBlockWithParams.Length; i++)
+                        {
+                            var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotBorder, blocksWithParams[i]);
+                            for (int j = 0; j < blocksWithParams[i].Count; j++)
+                            {
+                                var br = blocksWithParams[i][j];
+                                if (br != null && br.IsDynamicBlock)
+                                {
+                                    DynamicBlockReferencePropertyCollection pc = br.DynamicBlockReferencePropertyCollection;
+                                    for (int k = 0; k < Variables.blockDetailsParametersVariants[i].Count; k++)
+                                    {
+                                        if (pc[0].Value.ToString() == Variables.blockDetailsParametersVariants[i][k])
+                                        {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
+                        throw;
+                    }*/
                     tr.Commit();
                 }
             }

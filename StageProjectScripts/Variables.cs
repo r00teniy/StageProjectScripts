@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 using Autodesk.AutoCAD.Colors;
 
@@ -16,9 +17,11 @@ namespace StageProjectScripts
         //Layers for polylines to extract area from
         internal static string[] laylistPlA = { "09_Граница_благоустройства", "16_Здание_контур_площадь_застройки" };
         //Layers for blocks
-        internal static string[] laylistBlock = { "51_Деревья", "52_Кустарники", "12_Тактильная_плитка" };
-        //Tactile indicators names
-        internal static string[] tactileNames = { "Линии вдоль", "Линии поперек", "Конусы шахматный", "Конусы квадрат", "1 Линия", "2 Линии,Шуцлиния" };
+        internal static string[] laylistBlockCount = { "51_Деревья", "52_Кустарники" };
+        internal static string[] laylistBlockWithParams = { "12_Тактильная_плитка" };
+        //Block details names
+        internal static List<string>[] blockDetailsParameters = { new List<string> { "Тип", "Длина" } };
+        internal static List<string>[] blockDetailsParametersVariants = { new List<string> { "Линии вдоль", "Линии поперек", "Конусы шахматный", "Конусы квадрат", "1 Линия", "2 Линии", "Шуцлиния" } };
         //Layer for pavement labels
         internal static string pLabelLayer = "32_Подписи_покрытий";
         //Layer for greenery labels
@@ -32,7 +35,8 @@ namespace StageProjectScripts
         internal static long th = Convert.ToInt64("774A", 16); //Table handle for hatches
         internal static long tpl = Convert.ToInt64("78E16", 16); //Table handle for polylines for length
         internal static long tpa = Convert.ToInt64("88C28", 16); //Table handle for polylines for area
-        internal static long tb = Convert.ToInt64("78E73", 16); //Table handle for blocks
+        internal static long tbn = Convert.ToInt64("78E73", 16); //Table handle for normal blocks
+        internal static long tbp = Convert.ToInt64("A2E97", 16); //Table handle for blocks with params
         //Temporary
         internal static int[] curbLineCount = { 2, 1, 2, 2, 1, 1, 2, 1, 2, 2 };
     }

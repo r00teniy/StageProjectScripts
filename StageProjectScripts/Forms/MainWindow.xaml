@@ -70,6 +70,7 @@
                 Margin="10,5,10,5" Grid.ColumnSpan="2"/>
         <Button x:Name="CheckHatch"
                 Content="Проверить штриховки"
+                IsEnabled="false"
                 Grid.Row="4"
                 Grid.Column="2"
                 Grid.ColumnSpan="2"
@@ -78,9 +79,11 @@
         <Button x:Name="LabelPavement"
                 Grid.Row="5"
                 Content="Подписать покрытия"
+                IsEnabled="false"
                 Margin="10,5,10,5" Grid.ColumnSpan="2"/>
         <Button x:Name="LabelGreenery"
                 Content="Подписать озеленение"
+                IsEnabled="false"
                 Grid.Row="5"
                 Grid.Column="2"
                 Grid.ColumnSpan="2"
