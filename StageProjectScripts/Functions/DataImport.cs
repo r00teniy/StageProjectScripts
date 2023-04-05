@@ -130,6 +130,147 @@ internal static class DataImport
         }
         return output;
     }
+    //Getting block insertion points, including arrays
+    public static List<Point3d> GetBlocksPosition(Transaction tr, string layerName, string xrefName = null, bool everywhere = false)
+    {
+        List<Point3d> pointsList = new List<Point3d>();
+        Document doc = Application.DocumentManager.MdiActiveDocument;
+        Database db = doc.Database;
+        var xrefList = new List<XrefGraphNode>();
+        var btrList = new List<BlockTableRecord>();
+        var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+        if (everywhere)
+        {
+            XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
+            for (int i = 1; i < XrGraph.NumNodes; i++)
+            {
+                xrefList.Add(XrGraph.GetXrefNode(i));
+            }
+            btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+        }
+        else if (xrefName != null)
+        {
+            XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
+            for (int i = 0; i < XrGraph.NumNodes; i++)
+            {
+                XrefGraphNode XrNode = XrGraph.GetXrefNode(i);
+                if (XrNode.Name == xrefName)
+                {
+                    xrefList.Add(XrNode);
+                    break;
+                }
+            }
+        }
+        else
+        {
+            btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+        }
+
+        foreach (var xref in xrefList)
+        {
+            btrList.Add((BlockTableRecord)tr.GetObject(xref.BlockTableRecordId, OpenMode.ForRead));
+        }
+        foreach (var btr in btrList)
+        {
+            foreach (ObjectId objectId in btr)
+            {
+                if (objectId.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(BlockReference))))
+                {
+                    var blr = tr.GetObject(objectId, OpenMode.ForRead) as BlockReference;
+                    if (AssocArray.IsAssociativeArray(objectId))
+                    {
+                        var array = AssocArray.GetAssociativeArray(objectId);
+                        //getting params for all types of arrays
+                        var arrayParamsPa = array.GetParameters() as AssocArrayPathParameters;
+                        var arrayParamsRe = array.GetParameters() as AssocArrayRectangularParameters;
+                        var arrayParamsPo = array.GetParameters() as AssocArrayPolarParameters;
+                        //checking each type one by one
+                        if (arrayParamsPa != null)
+                        {
+                            using (BlockReference br = (BlockReference)objectId.Open(OpenMode.ForRead))
+                            {
+                                using (BlockTableRecord bTr = br.DynamicBlockTableRecord.Open(OpenMode.ForRead) as BlockTableRecord)
+                                {
+                                    foreach (ObjectId ids in bTr)
+                                    {
+                                        if (ids.ObjectClass.Name == "AcDbBlockReference")
+                                        {
+                                            using (BlockReference bRef = (BlockReference)ids.Open(OpenMode.ForRead))
+                                            {
+                                                string sourceLayer;
+                                                using (BlockReference blist = (BlockReference)array.SourceEntities[0].Open(OpenMode.ForRead))
+                                                {
+                                                    sourceLayer = blist.Layer;
+                                                }
+                                                if (sourceLayer == layerName)
+                                                {
+                                                    pointsList.Add(bRef.Position);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else if (arrayParamsRe != null)
+                        {
+                            using (BlockReference bRef = (BlockReference)objectId.Open(OpenMode.ForRead))
+                            {
+                                string sourceLayer;
+                                using (BlockReference blist = (BlockReference)array.SourceEntities[0].Open(OpenMode.ForRead))
+                                {
+                                    sourceLayer = blist.Layer;
+                                }
+                                if (sourceLayer == layerName)
+                                {
+                                    var basePt = bRef.Position;
+                                    var locators = array.getItems(true);
+                                    foreach (var loc in locators)
+                                    {
+
+                                        var matrix = array.GetItemTransform(loc);
+                                        pointsList.Add(basePt.TransformBy(matrix));
+                                    }
+                                }
+                            }
+                        }
+                        else if (arrayParamsPo != null)
+                        {
+                            using (BlockReference bRef = (BlockReference)objectId.Open(OpenMode.ForRead))
+                            {
+                                string sourceLayer;
+                                using (BlockReference blist = (BlockReference)array.SourceEntities[0].Open(OpenMode.ForRead))
+                                {
+                                    sourceLayer = blist.Layer;
+                                }
+                                if (sourceLayer == layerName)
+                                {
+                                    var basePt = bRef.Position;
+                                    double[] mat1 = { 1.0, 0.0, 0.0, basePt.X, 0.0, 1.0, 0.0, basePt.Y, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+                                    double[] mat2 = { 1.0, 0.0, 0.0, -basePt.X, 0.0, 1.0, 0.0, -basePt.Y, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+                                    Matrix3d mat13d = new Matrix3d(mat1);
+                                    Matrix3d mat23d = new Matrix3d(mat2);
+                                    var basePtB = basePt.TransformBy(mat23d);
+                                    var locators = array.getItems(true);
+                                    foreach (var loc in locators)
+                                    {
+                                        var matrix = array.GetItemTransform(loc);
+                                        pointsList.Add(basePtB.TransformBy(matrix).TransformBy(mat13d));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (blr.Layer == layerName && blr != null)
+                    {
+                        pointsList.Add(blr.Position);
+                    }
+                }
+                //counting blocks in array
+            }
+        }
+        return pointsList;
+    }
     //Method to get all layer names containing provided string
     public static List<string> GetAllLayersContainingString(string str, string xRef = null)
     {

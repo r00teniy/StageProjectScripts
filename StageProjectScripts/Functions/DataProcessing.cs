@@ -166,17 +166,21 @@ namespace StageProjectScripts.Functions
                     //Collecting data for normal blocks table
                     try
                     {
-                        //Counting normal blocks
-                        List<BlockReference>[] blocksNormal = new List<BlockReference>[Variables.laylistBlockCount.Length];
-                        for (var i = 0; i < Variables.laylistBlockCount.Length; i++)
+                        //Counting blocks including those in arrays
+                        List<List<Point3d>> blockPositions = new();
+                        List<List<bool>> areBlocksInside = new();
+                        for (int i = 0; i < Variables.laylistBlockCount.Length; i++)
                         {
-                            blocksNormal[i] = DataImport.GetAllElementsOfTypeOnLayer<BlockReference>(tr, Variables.laylistBlockCount[i]);
+                            blockPositions.Add(new List<Point3d>());
+                            blockPositions[i] = DataImport.GetBlocksPosition(tr, Variables.laylistBlockCount[i]);
+                            areBlocksInside.Add(new List<bool>());
+                            areBlocksInside[i] = AreObjectsInsidePlot(plotBorder, blockPositions[i]);
                         }
+                        //Creating table data
                         for (var i = 0; i < Variables.laylistBlockCount.Length; i++)
                         {
-                            var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotBorder, blocksNormal[i]);
-                            normalBlocksModelList.Add(new DataElementModel(areBlocksInside.Where(x => x == true).Count(), i, true));
-                            normalBlocksModelList.Add(new DataElementModel(areBlocksInside.Where(x => x == false).Count(), i, false));
+                            normalBlocksModelList.Add(new DataElementModel(areBlocksInside[i].Where(x => x == true).Count(), i, true));
+                            normalBlocksModelList.Add(new DataElementModel(areBlocksInside[i].Where(x => x == false).Count(), i, false));
                         }
                         //Filling Normal blocks table
                         DataExport.FillTableWithData(tr, normalBlocksModelList, Variables.tbn, Variables.laylistBlockCount.Length, "0");
@@ -338,9 +342,19 @@ namespace StageProjectScripts.Functions
             foreach (var item in objects)
             {
                 var tempResult = false;
-                if (ArePointsInsidePolyline(GetPointsFromObject(item), plotBorder))
+                if (item is Point3d point)
                 {
-                    tempResult = true;
+                    if (ArePointsInsidePolyline(new List<Point3d>() { point }, plotBorder))
+                    {
+                        tempResult = true;
+                    }
+                }
+                else
+                {
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotBorder))
+                    {
+                        tempResult = true;
+                    }
                 }
                 results.Add(tempResult);
             }
