@@ -15,5 +15,12 @@ namespace StageProjectScripts
             var MW = new MainWindow();
             MW.Show();
         }
+        [CommandMethod("StageProjectChecks")]
+        static public void StageProjectChecks()
+        {
+            Variables.savedData = Functions.SettingsStorage.ReadData();
+            var CW = new ChecksWindow();
+            CW.Show();
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.Linq;
 
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
 
 using StageProjectScripts.Models;
 
@@ -10,7 +11,27 @@ namespace StageProjectScripts.Functions;
 
 internal class DataExport
 {
-
+    internal static void CreateTempCircleOnPoint(Transaction tr, List<Point3d> pts)
+    {
+        //temporary solution
+        Document doc = Application.DocumentManager.MdiActiveDocument;
+        Database db = doc.Database;
+        var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+        BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+        foreach (var pt in pts)
+        {
+            using (Circle acCirc = new Circle())
+            {
+                acCirc.Center = pt;
+                acCirc.Radius = 2;
+                acCirc.Color = Variables.tempLayerColor;
+                acCirc.Layer = Variables.tempLayer;
+                // Add the new object to the block table record and the transaction
+                btr.AppendEntity(acCirc);
+                tr.AddNewlyCreatedDBObject(acCirc, true);
+            }
+        }
+    }
     internal static bool SetBlockAttribute(BlockReference block, string attrName, string attrValue)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;

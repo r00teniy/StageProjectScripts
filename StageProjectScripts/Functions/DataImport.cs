@@ -121,7 +121,8 @@ internal static class DataImport
                 if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(T))))
                 {
                     var entity = (T)tr.GetObject(item, OpenMode.ForRead);
-                    if (entity.Layer.Contains(layer))
+                    var layerToCHeck = xrefName != null ? xrefName + "|" + layer : layer;
+                    if (entity.Layer == layerToCHeck)
                     {
                         output.Add(entity);
                     }

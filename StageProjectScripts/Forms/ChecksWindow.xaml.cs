@@ -10,22 +10,15 @@ using StageProjectScripts.Functions;
 namespace StageProjectScripts.Forms
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Interaction logic for ChecksWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class ChecksWindow : Window
     {
-        private BindingList<string> xRefs = new(DataImport.GetXRefList());
         private BindingList<string> plotRef = new(DataImport.GetXRefList());
         private List<string> plots = new();
-        public MainWindow()
+        public ChecksWindow()
         {
             InitializeComponent();
-            //Base xRef List
-            baseXRefComboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding() { Source = xRefs });
-            if (Variables.savedData[0] != "" && xRefs.Where(x => x == Variables.savedData[0]).ToList().Count != 0)
-            {
-                baseXRefComboBox.SelectedIndex = xRefs.IndexOf(Variables.savedData[0]);
-            }
             //Plots xRefList
             plotsXRefComboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding() { Source = plotRef });
             if (Variables.savedData[1] != "" && plotRef.Where(x => x == Variables.savedData[1]).ToList().Count != 0)
@@ -46,11 +39,11 @@ namespace StageProjectScripts.Forms
             plotsComboBox.SelectedIndex = 0;
         }
 
-        private void CalculateButton_Click(object sender, RoutedEventArgs e)
+        private void CheckIntersections_Click(object sender, RoutedEventArgs e)
         {
             this.Hide();
-            DataProcessing.CalculateVolumes(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
-            SettingsStorage.SaveData(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+            SettingsStorage.SaveData("", plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+            DataProcessing.CheckForBorderIntersections(plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
             this.Show();
         }
 

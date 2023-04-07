@@ -17,6 +17,87 @@ namespace StageProjectScripts.Functions
 {
     internal static class DataProcessing
     {
+        internal static Polyline GetPlotBorder(Transaction tr, string plotXref, string plotNumber)
+        {
+            var plotBorders = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.plotLayers + plotNumber.Replace(':', '_'), plotXref);
+            if (plotBorders.Count != 1)
+            {
+                System.Windows.MessageBox.Show("На слое участка ГПЗУ должна быть ровно одна полилиния", "Error", System.Windows.MessageBoxButton.OK);
+                return null;
+            }
+            else
+            {
+                return plotBorders[0];
+            }
+        }
+        internal static void CheckForBorderIntersections(string plotXref, string plotNumber)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+            Editor ed = doc.Editor;
+            List<DataElementModel> hatchModelList = new();
+            List<DataElementModel> plineLengthModelList = new();
+            List<DataElementModel> plineAreaModelList = new();
+            List<Point3d> errorPoints = new();
+            using (DocumentLock acLckDoc = doc.LockDocument())
+            {
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+                    Polyline plotBorder = GetPlotBorder(tr, plotXref, plotNumber);
+                    if (plotBorder == null)
+                    {
+                        return;
+                    }
+                    List<Hatch>[] hatches = new List<Hatch>[Variables.laylistHatch.Length];
+                    for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                    {
+                        hatches[i] = DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i]);
+                    }
+                    //Checking hatches
+                    for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                    {
+                        foreach (var hat in hatches[i])
+                        {
+                            if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Hatch>(hat), plotBorder) is var res && res != null)
+                            {
+                                errorPoints.Add((Point3d)res);
+                            }
+                        }
+                    }
+                    //Checking polylines
+                    List<Polyline>[] polylinesForLines = new List<Polyline>[Variables.laylistPlL.Length + Variables.laylistPlA.Length - 1];
+                    for (var i = 0; i < Variables.laylistPlL.Length; i++)
+                    {
+                        polylinesForLines[i] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.laylistPlL[i]);
+                    }
+                    for (int i = 1; i < Variables.laylistPlA.Length; i++)
+                    {
+                        polylinesForLines[Variables.laylistPlL.Length + i - 1] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.laylistPlA[i]);
+                    }
+                    for (var i = 0; i < polylinesForLines.Length; i++)
+                    {
+                        foreach (var pl in polylinesForLines[i])
+                        {
+                            if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Polyline>(pl), plotBorder) is var res && res != null)
+                            {
+                                errorPoints.Add((Point3d)res);
+                            }
+                        }
+                    }
+                    //Results
+                    if (errorPoints.Count == 0)
+                    {
+                        System.Windows.MessageBox.Show("Пересечений элементов с границей ГПЗУ нет", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show($"Найдено {errorPoints.Count} объектов, пересекающих границу ГПЗУ", "Error", System.Windows.MessageBoxButton.OK);
+                        DataExport.CreateTempCircleOnPoint(tr, errorPoints);
+                    }
+                    tr.Commit();
+                }
+            }
+        }
         internal static void CalculateVolumes(string xRef, string plotXref, string plotNumber)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -27,20 +108,14 @@ namespace StageProjectScripts.Functions
             List<DataElementModel> plineAreaModelList = new();
             List<DataElementModel> normalBlocksModelList = new();
             List<DataElementModel> paramBlocksModelList = new();
-            Polyline plotBorder;
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    var plotBorders = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.plotLayers + plotNumber.Replace(':', '_'), plotXref);
-                    if (plotBorders.Count != 1)
+                    Polyline plotBorder = GetPlotBorder(tr, plotXref, plotNumber);
+                    if (plotBorder == null)
                     {
-                        System.Windows.MessageBox.Show("На слое участка ГПЗУ должна быть ровно одна полилиния", "Error", System.Windows.MessageBoxButton.OK);
                         return;
-                    }
-                    else
-                    {
-                        plotBorder = plotBorders[0];
                     }
                     //Getting data for Hatch table
                     try
@@ -98,13 +173,14 @@ namespace StageProjectScripts.Functions
                         {
                             polylinesForAreas[i] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.laylistPlA[i], xRef);
                         }
-                        if (ArePointsInsidePolyline(GetPointsFromObject(polylinesForAreas[0][0]), plotBorder))
+                        try
                         {
+                            var check = ArePointsInsidePolyline(GetPointsFromObject(polylinesForAreas[0][0]), plotBorder);
                             object pl = polylinesForAreas[0][0];
                             var plineArea = (double)pl.GetType().InvokeMember("Area", BindingFlags.GetProperty, null, pl, null);
                             plineAreaModelList.Add(new DataElementModel(plineArea, 0, true));
                         }
-                        else
+                        catch
                         {
                             Region workingRegion = default;
                             if (polylinesForAreas[0].Count == 1)
@@ -273,8 +349,6 @@ namespace StageProjectScripts.Functions
                     {
                         if (ent is AcBr.Face)
                             result = PointContainment.Inside;
-                        else
-                            result = PointContainment.OnBoundary;
                     }
                 }
             }
@@ -323,13 +397,34 @@ namespace StageProjectScripts.Functions
                     {
                         isFirstPointIn = isThisPointIn;
                     }
-                    else
+                    else if (isThisPointIn != PointContainment.OnBoundary)
                     {
                         throw new System.Exception("Одна из полилиний или штриховок пересекает границу участка, необходимо исправить.");
                     }
                 }
             }
             return isFirstPointIn == PointContainment.Inside;
+        }
+        //Getting points that are on other side of plotBorder
+        public static Point3d? ArePointsOnBothSidesOfBorder(List<Point3d> points, Polyline pl)
+        {
+            var isFirstPointIn = GetPointContainment(pl, points[0]);
+            for (int i = 1; i < points.Count; i++)
+            {
+                var isThisPointIn = GetPointContainment(pl, points[i]);
+                if (isThisPointIn != isFirstPointIn)
+                {
+                    if (isFirstPointIn == PointContainment.OnBoundary)
+                    {
+                        isFirstPointIn = isThisPointIn;
+                    }
+                    else if (isThisPointIn != PointContainment.OnBoundary)
+                    {
+                        return points[i];
+                    }
+                }
+            }
+            return null;
         }
         //Function to check if hatch/polyline/blockreference is inside plot (can have 2+ borders)
         public static List<bool> AreObjectsInsidePlot<T>(Polyline plotBorder, List<T> objects)
