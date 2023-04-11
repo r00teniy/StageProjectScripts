@@ -3,6 +3,7 @@ using System.Linq;
 
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 
 using StageProjectScripts.Models;
@@ -59,6 +60,101 @@ internal class DataExport
             tr.Commit();
         }
         return false;
+    }
+    //Creating Mleader with text
+    internal static void CreateMleaderWithText(Transaction tr, List<string> texts, List<Point3d> pts, string layer)
+    {
+        Document doc = Application.DocumentManager.MdiActiveDocument;
+        Database db = doc.Database;
+        var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+        BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+        //creating Mleaders
+        for (int i = 0; i < texts.Count; i++)
+        {
+            //createing Mleader
+            MLeader leader = new MLeader();
+            leader.SetDatabaseDefaults();
+            leader.ContentType = ContentType.MTextContent;
+            leader.Layer = layer;
+            MText mText = new MText();
+            mText.SetDatabaseDefaults();
+            mText.Width = 0.675;
+            mText.Height = 1.25;
+            mText.TextHeight = 1.25;
+            mText.SetContentsRtf(texts[i]);
+            mText.Location = new Point3d(pts[i].X + 2, pts[i].Y + 2, pts[i].Z);
+            mText.Rotation = 0;
+            mText.BackgroundFill = true;
+            mText.BackgroundScaleFactor = 1.1;
+            leader.MText = mText;
+            _ = leader.AddLeaderLine(pts[i]);
+            btr.AppendEntity(leader);
+            tr.AddNewlyCreatedDBObject(leader, true);
+        }
+
+    }
+    internal static void CreateMleaderWithBlockForGroupOfobjects(Transaction tr, List<List<Point3d>> pointList, string id, string style, string layer, string blockName, string[] attr)
+    {
+        Document doc = Application.DocumentManager.MdiActiveDocument;
+        Database db = doc.Database;
+        Editor ed = doc.Editor;
+        BlockTable bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+        BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+        //Getting rotation of current UCS to pass it to block
+        Matrix3d UCS = ed.CurrentUserCoordinateSystem;
+        CoordinateSystem3d cs = UCS.CoordinateSystem3d;
+        double rotAngle = cs.Xaxis.AngleOnPlane(new Plane(Point3d.Origin, Vector3d.ZAxis));
+        //Creating Mleaders for each group
+        foreach (var group in pointList)
+        {
+            DBDictionary mlStyles = tr.GetObject(db.MLeaderStyleDictionaryId, OpenMode.ForRead) as DBDictionary;
+            ObjectId mlStyleId = mlStyles.GetAt(style);
+            var leader = new MLeader();
+            leader.SetDatabaseDefaults();
+            leader.MLeaderStyle = mlStyleId;
+            leader.ContentType = ContentType.BlockContent;
+            leader.Layer = layer;
+            leader.BlockContentId = bT[blockName];
+            leader.BlockPosition = new Point3d(group[0].X + 5, group[0].Y + 5, 0);
+            leader.BlockRotation = rotAngle;
+            int idx = leader.AddLeaderLine(group[0]);
+            // adding leader points for each element
+            // TODO: temporary solution, need sorting algorithm for better performance.
+            if (group.Count > 1)
+            {
+                foreach (Point3d m in group)
+                {
+                    leader.AddFirstVertex(idx, m);
+                }
+            }
+            //Handle Block Attributes
+            BlockTableRecord blkLeader = tr.GetObject(leader.BlockContentId, OpenMode.ForRead) as BlockTableRecord;
+            //Doesn't take in consideration oLeader.BlockRotation
+            Matrix3d Transfo = Matrix3d.Displacement(leader.BlockPosition.GetAsVector());
+            foreach (ObjectId blkEntId in blkLeader)
+            {
+                AttributeDefinition AttributeDef = tr.GetObject(blkEntId, OpenMode.ForRead) as AttributeDefinition;
+                if (AttributeDef != null)
+                {
+                    AttributeReference AttributeRef = new AttributeReference();
+                    AttributeRef.SetAttributeFromBlock(AttributeDef, Transfo);
+                    AttributeRef.Position = AttributeDef.Position.TransformBy(Transfo);
+                    // setting attributes
+                    if (AttributeRef.Tag == attr[0])
+                    {
+                        AttributeRef.TextString = id;
+                    }
+                    if (AttributeRef.Tag == attr[1])
+                    {
+                        AttributeRef.TextString = group.Count.ToString();
+                    }
+                    leader.SetBlockAttribute(blkEntId, AttributeRef);
+                }
+            }
+            // adding Mleader to blocktablerecord
+            btr.AppendEntity(leader);
+            tr.AddNewlyCreatedDBObject(leader, true);
+        }
     }
     internal static void FillTableWithData(Transaction tr, List<DataElementModel> hatches, long tableHandle, int numberOfLines, string format)
     {

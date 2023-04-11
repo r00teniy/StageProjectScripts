@@ -18,12 +18,18 @@ namespace StageProjectScripts
         internal static string[] laylistPlA = { "09_Граница_благоустройства", "16_Здание_контур_площадь_застройки" };
         //Layers for blocks
         internal static string[] laylistBlockCount = { "51_Деревья", "52_Кустарники" };
+        internal static string greeneryMleaderStyleName = "Озеленение";
+        internal static string greeneryMleaderBlockName = "Выноска_озеленение";
+        internal static string[] greeneryId = { "1", "2" };
+        internal static string[] greeneryAttr = { "НОМЕР", "КОЛ-ВО" };
+        internal static double[] greeneryGroupingDistance = { 6.1, 4.1 };
         internal static string[] laylistBlockWithParams = { "12_Тактильная_плитка" };
         //Block details names
         internal static List<string>[] blockDetailsParameters = { new List<string> { "Тип", "0", "Длина", "1" } };
         internal static List<string>[] blockDetailsParametersVariants = { new List<string> { "Линии вдоль", "Линии поперек", "Конусы шахматный", "Конусы квадрат", "1 Линия", "2 Линии", "Шуцлиния" } };
         //Layer for pavement labels
         internal static string pLabelLayer = "32_Подписи_покрытий";
+        internal static string[] pLabelValues = { "1", "1А", "2", "2А", "3", "4", "4", "2", "2", "5" };
         //Layer for greenery labels
         internal static string oLabelLayer = "50_Озеленение_подписи";
         //Temporary layer data

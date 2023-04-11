@@ -48,15 +48,29 @@ namespace StageProjectScripts.Forms
 
         private void CalculateButton_Click(object sender, RoutedEventArgs e)
         {
-            this.Hide();
+            Hide();
             DataProcessing.CalculateVolumes(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
             SettingsStorage.SaveData(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
-            this.Show();
+            Show();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            Close();
+        }
+
+        private void LabelPavement_Click(object sender, RoutedEventArgs e)
+        {
+            Hide();
+            DataProcessing.LabelPavements(baseXRefComboBox.SelectedItem.ToString());
+            Show();
+        }
+
+        private void LabelGreenery_Click(object sender, RoutedEventArgs e)
+        {
+            Hide();
+            DataProcessing.LabelGreenery();
+            Show();
         }
     }
 }

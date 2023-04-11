@@ -73,16 +73,14 @@
         <Button x:Name="LabelPavement"
                 Grid.Row="4"
                 Content="Подписать покрытия"
-                IsEnabled="false"
-                Margin="10,5,10,5" Grid.ColumnSpan="2"/>
+                Margin="10,5,10,5" Grid.ColumnSpan="2" Click="LabelPavement_Click"/>
         <!-- Row 5-->
         <Button x:Name="LabelGreenery"
                 Content="Подписать озеленение"
-                IsEnabled="false"
                 Grid.Row="5"
                 Grid.Column="0"
                 Grid.ColumnSpan="2"
-                Margin="10,5,10,5"/>
+                Margin="10,5,10,5" Click="LabelGreenery_Click"/>
         <Button x:Name="CloseButton"
                 Content="Закрыть"
                 Grid.Row="5"

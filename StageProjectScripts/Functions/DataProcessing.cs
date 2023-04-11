@@ -98,6 +98,150 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
+        internal static void LabelPavements(string xRef)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+            using (DocumentLock acLckDoc = doc.LockDocument())
+            {
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+                    List<Hatch>[] hatches = new List<Hatch>[Variables.laylistHatch.Length];
+                    for (var i = 0; i < Variables.pLabelValues.Length; i++)
+                    {
+                        hatches[i] = DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i], xRef);
+                    }
+                    List<string> texts = new();
+                    List<Point3d> pts = new();
+                    //filling lists with data
+                    for (var i = 0; i < Variables.pLabelValues.Length; i++)
+                    {
+                        foreach (var hat in hatches[i])
+                        {
+                            //getting center of each hatch
+                            Extents3d extents = hat.GeometricExtents;
+                            pts.Add(extents.MinPoint + (extents.MaxPoint - extents.MinPoint) / 2.0);
+                            //adding label texts based on layer
+                            texts.Add(Variables.pLabelValues[i]);
+                        }
+                    }
+                    //creating MLeaders
+                    DataExport.CreateMleaderWithText(tr, texts, pts, Variables.pLabelLayer);
+                    tr.Commit();
+                }
+            }
+        }
+        internal static void LabelGreenery()
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+            using (DocumentLock acLckDoc = doc.LockDocument())
+            {
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+                    for (int i = 0; i < Variables.greeneryGroupingDistance.Length; i++)
+                    {
+                        var greeneryBlocks = GroupBlocksByDistance(DataImport.GetBlocksPosition(tr, Variables.laylistBlockCount[i]), Variables.greeneryGroupingDistance[i]);
+                        // TODO: Add better grouping mechanism
+                        DataExport.CreateMleaderWithBlockForGroupOfobjects(tr, greeneryBlocks, Variables.greeneryId[i], Variables.greeneryMleaderStyleName, Variables.oLabelLayer, Variables.greeneryMleaderBlockName, Variables.greeneryAttr);
+                    }
+                    tr.Commit();
+                }
+            }
+        }
+        //Function to group elements based on distance between 2 of them
+        public static List<List<Point3d>> GroupBlocksByDistance(List<Point3d> Points, double Distance)
+        {
+            // Calclulate distance between points
+            List<List<double>> Dist = new List<List<double>>();
+            for (int i = 0; i < Points.Count; i++)
+            {
+                Dist.Add(new List<double>());
+
+                for (int j = 0; j < Points.Count; j++)
+                {
+                    Dist[i].Add(Points[i].DistanceTo(Points[j]));
+                }
+            }
+            // Making lists of close objects
+            List<List<int>> Close = new List<List<int>>();
+            for (int i = 0; i < Points.Count; i++)
+            {
+                Close.Add(new List<int>());
+                for (int j = 0; j < Points.Count; j++)
+                {
+                    if (Dist[i][j] < Distance)
+                    {
+                        Close[i].Add(j);
+                    }
+                }
+            }
+            // Making groups
+            List<List<int>> Groups = new List<List<int>>();
+            for (int i = 0; i < Points.Count; i++)
+            {
+                List<int> temp = new List<int>();
+                List<int> temp2 = new List<int>();
+                temp.Add(Close[i][0]);
+                temp2.Add(Close[i][0]);
+                int X = 0;
+                while (X == 0)
+                {
+                    for (int k = 0; k < temp.Count; k++)
+                    {
+                        foreach (int l in Close[temp[k]])
+                        {
+                            if (!temp.Contains(l))
+                            {
+                                temp2.Add(l);
+                            }
+                        }
+                    }
+                    if (temp == temp2) // If we didn't add new objects we go to next one
+                    {
+                        X = 1;
+                    }
+                    else
+                    {
+                        temp = temp2;
+                    }
+                }
+                Groups.Add(temp);
+            }
+            // Clean group
+            List<List<int>> GroupsClean = new List<List<int>>();
+            for (int i = 0; i < Groups.Count; i++)
+            {
+                if (Groups[i] != null && Groups[i].Count > 1)
+                {
+                    foreach (int j in Groups[i])
+                    {
+                        if (j != i)
+                        {
+                            Groups[j] = null;
+                        }
+                    }
+                }
+            }
+            foreach (List<int> m in Groups)
+            {
+                if (m != null)
+                {
+                    GroupsClean.Add(m);
+                }
+            }
+            // Change back to points
+            List<List<Point3d>> GroupPoints = new List<List<Point3d>>();
+            for (int i = 0; i < GroupsClean.Count; i++)
+            {
+                GroupPoints.Add(new List<Point3d>());
+                foreach (int j in GroupsClean[i])
+                {
+                    GroupPoints[i].Add(Points[j]);
+                }
+            }
+            return GroupPoints;
+        }
         internal static void CalculateVolumes(string xRef, string plotXref, string plotNumber)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
