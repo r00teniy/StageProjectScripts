@@ -41,15 +41,56 @@ namespace StageProjectScripts.Forms
 
         private void CheckIntersections_Click(object sender, RoutedEventArgs e)
         {
-            this.Hide();
-            SettingsStorage.SaveData("", plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
-            DataProcessing.CheckForBorderIntersections(plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
-            this.Show();
+            if (plotsXRefComboBox.SelectedItem != null && plotsComboBox.SelectedItem != null)
+            {
+                Hide();
+                Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
+                SettingsStorage.SaveData("", plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+                DataProcessing.CheckForBorderIntersections(plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+                Show();
+            }
+            else
+            {
+                MessageBox.Show($"Необходимо выбрать файл границ и номер ГПЗУ", "Ошибка", MessageBoxButton.OK);
+            }
+
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            Close();
+        }
+
+        private void CheckHatchSelfIntersections_Click(object sender, RoutedEventArgs e)
+        {
+            Hide();
+            Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
+            DataProcessing.CheckHatchesForSelfIntersections();
+            Show();
+        }
+
+        private void CheckHatches_Click(object sender, RoutedEventArgs e)
+        {
+            Hide();
+            Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
+            DataProcessing.CheckForHatchesWithBorderRestorationErrors();
+            Show();
+        }
+
+        private void CheckHatchIntersections_Click_1(object sender, RoutedEventArgs e)
+        {
+            Hide();
+            Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
+            DataProcessing.HatchIntersections();
+            Show();
+        }
+
+        private void DeleteTempGeometry_Click(object sender, RoutedEventArgs e)
+        {
+            Hide();
+            Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
+            DataExport.ClearTemp();
+            Show();
         }
     }
 }

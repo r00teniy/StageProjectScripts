@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
@@ -21,6 +23,7 @@ internal class DataExport
         BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
         foreach (var pt in pts)
         {
+            LayerCheck(tr, Variables.tempLayer, Variables.tempLayerColor, Variables.tempLayerLineWeight, Variables.tempLayerPrintable);
             using (Circle acCirc = new Circle())
             {
                 acCirc.Center = pt;
@@ -92,6 +95,50 @@ internal class DataExport
             tr.AddNewlyCreatedDBObject(leader, true);
         }
 
+    }
+    //Function to clear temporary geometry
+    public static void ClearTemp()
+    {
+        Document doc = Application.DocumentManager.MdiActiveDocument;
+        Database db = doc.Database;
+        using (Transaction tr = db.TransactionManager.StartTransaction())
+        {
+            using (DocumentLock acLckDoc = doc.LockDocument())
+            {
+                var blockTable = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) as BlockTable;
+                var btr = tr.GetObject(blockTable[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) as BlockTableRecord;
+                foreach (ObjectId objectId in btr)
+                {
+                    var obj = tr.GetObject(objectId, OpenMode.ForWrite, false, true) as Entity;
+                    if (obj.Layer == Variables.tempLayer) // Checking for temporary layer
+                    {
+                        obj.Erase();
+                    }
+                }
+            }
+            tr.Commit();
+        }
+    }
+    //Function to check if layer exist and create if not
+    public static void LayerCheck(Transaction tr, string layer, Color color, double lw, Boolean isPlottable)
+    {
+        Document doc = Application.DocumentManager.MdiActiveDocument;
+        Database db = doc.Database;
+        LayerTable lt = tr.GetObject(db.LayerTableId, OpenMode.ForRead) as LayerTable;
+        if (!lt.Has(layer))
+        {
+            var newLayer = new LayerTableRecord
+            {
+                Name = layer,
+                Color = color,
+                LineWeight = (LineWeight)(lw * 100),
+                IsPlottable = isPlottable
+            };
+
+            lt.UpgradeOpen();
+            lt.Add(newLayer);
+            tr.AddNewlyCreatedDBObject(newLayer, true);
+        }
     }
     internal static void CreateMleaderWithBlockForGroupOfobjects(Transaction tr, List<List<Point3d>> pointList, string id, string style, string layer, string blockName, string[] attr)
     {

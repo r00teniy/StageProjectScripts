@@ -17,24 +17,177 @@ namespace StageProjectScripts.Functions
 {
     internal static class DataProcessing
     {
-        internal static Polyline GetPlotBorder(Transaction tr, string plotXref, string plotNumber)
+        //Function to check hatches intersections
+        public static void HatchIntersections()
         {
-            var plotBorders = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.plotLayers + plotNumber.Replace(':', '_'), plotXref);
-            if (plotBorders.Count != 1)
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+            Editor ed = doc.Editor;
+
+            using (Transaction tr = db.TransactionManager.StartTransaction())
             {
-                System.Windows.MessageBox.Show("На слое участка ГПЗУ должна быть ровно одна полилиния", "Error", System.Windows.MessageBoxButton.OK);
-                return null;
+                using (DocumentLock acLckDoc = doc.LockDocument())
+                {
+                    var blockTable = tr.GetObject(db.BlockTableId, OpenMode.ForRead, false) as BlockTable;
+                    var btr = tr.GetObject(blockTable[BlockTableRecord.ModelSpace], OpenMode.ForWrite, false) as BlockTableRecord; // FOrWrite, because we will add new objects
+                    List<Polyline> plines = new(); // list of hatch boundaries
+                    //Finding intersecting Hatches
+                    List<Hatch> hatches = new();
+                    var layersToCheck = Variables.laylistHatch.ToList();
+                    layersToCheck.AddRange(Variables.laylistPlA);
+                    for (var i = 0; i < layersToCheck.Count; i++)
+                    {
+                        hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, layersToCheck[i]));
+                    }
+                    foreach (var hat in hatches)
+                    {
+                        // can't instersec hatches, get polyline and intersect them or just get curves for each loop and intersect them??
+                        Plane plane = hat.GetPlane();
+                        int nLoops = hat.NumberOfLoops;
+                        for (int k = 0; k < nLoops; k++)
+                        {
+                            HatchLoop loop = hat.GetLoopAt(k);
+                            var tmp = GetBorderFromHatchLoop(loop, plane); // getting polyline boundary of a hatch
+                            if (tmp != null)
+                            {
+                                plines.Add(tmp);
+                            }
+                        }
+                    }
+                    int sCount = 1; // starting number for second for, so we won't repeat intersections we already did
+                    List<ObjectId> intersections = new();
+                    for (int i = 0; i < plines.Count; i++)
+                    {
+                        for (int j = sCount; j < plines.Count - 1; j++) // we don't need to intersect last one
+                        {
+                            Region aReg = IntersectionRegionFromTwoPolylines(plines[i], plines[j]);
+                            if (aReg != null && aReg.Area != 0)
+                            {
+                                // checking if temporary layer exist, if not - creating it.
+                                DataExport.LayerCheck(tr, Variables.tempLayer, Variables.tempLayerColor, Variables.tempLayerLineWeight, Variables.tempLayerPrintable);
+                                aReg.Layer = Variables.tempLayer;
+                                // Adding region to modelspace
+                                btr.AppendEntity(aReg);
+                                tr.AddNewlyCreatedDBObject(aReg, true);
+                                intersections.Add(aReg.ObjectId);
+                            }
+                            else
+                            {
+                                aReg.Dispose();
+                            }
+                        }
+                        sCount++; // adding one so it would start intersecting from next one
+                    }
+                    System.Windows.MessageBox.Show($"Найдено {intersections.Count} пересечений штриховок", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    if (intersections.Count > 0)
+                    {
+                        ed.SetImpliedSelection(intersections.ToArray());
+                        ed.SelectImplied(); // selecting bad hatches 
+                    }
+                    tr.Commit();
+                }
             }
-            else
+        }
+        //Function finding intersection region of 2 polylines
+        public static Region IntersectionRegionFromTwoPolylines(Polyline pl1, Polyline pl2)
+        {
+            DBObjectCollection c1 = new DBObjectCollection();
+            DBObjectCollection c2 = new DBObjectCollection();
+            c1.Add(pl1);
+            c2.Add(pl2);
+            var r1 = Region.CreateFromCurves(c1);
+            var r2 = Region.CreateFromCurves(c2);
+            if (r1 != null && r2 != null && r1.Count != 0 && r2.Count != 0)
             {
-                return plotBorders[0];
+                Region r11 = r1.Cast<Region>().First(); //region from first polyline
+                Region r21 = r2.Cast<Region>().First(); // region from second polyline
+                r11.BooleanOperation(BooleanOperationType.BoolIntersect, r21); // Creating intersection in first one
+                return r11;
+            }
+            return null;
+        }
+        internal static void CheckForHatchesWithBorderRestorationErrors()
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+            Editor ed = doc.Editor;
+            List<ObjectId> errorHatches = new();
+            using (DocumentLock acLckDoc = doc.LockDocument())
+            {
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+                    List<Hatch> hatches = new();
+                    for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                    {
+                        hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i]));
+                    }
+                    foreach (var hat in hatches)
+                    {
+                        try
+                        {
+                            Plane plane = hat.GetPlane();
+                            for (int k = 0; k < hat.NumberOfLoops; k++)
+                            {
+                                HatchLoop loop = hat.GetLoopAt(k);
+                                HatchLoopTypes hlt = hat.LoopTypeAt(k);
+                                Polyline looparea = GetBorderFromHatchLoop(loop, plane);
+                            }
+                        }
+                        catch
+                        {
+                            errorHatches.Add(hat.ObjectId);
+                        }
+                    }
+                    System.Windows.MessageBox.Show($"Найдено {errorHatches.Count} проблемных штриховок, просьба проверить их или пересоздать", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    if (errorHatches.Count > 0)
+                    {
+                        ed.SetImpliedSelection(errorHatches.ToArray());
+                        ed.SelectImplied(); // selecting bad hatches 
+                    }
+                    tr.Commit();
+                }
+            }
+        }
+        internal static void CheckHatchesForSelfIntersections()
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+            Editor ed = doc.Editor;
+            List<ObjectId> errorHatches = new();
+            using (DocumentLock acLckDoc = doc.LockDocument())
+            {
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+                    List<Hatch> hatches = new();
+                    for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                    {
+                        hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i]));
+                    }
+                    foreach (var hat in hatches)
+                    {
+                        try
+                        {
+                            var test = hat.Area;
+                        }
+                        catch
+                        {
+                            errorHatches.Add(hat.ObjectId);
+                        }
+                    }
+                    System.Windows.MessageBox.Show($"Найдено {errorHatches.Count} самопересекающихся штриховок", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    if (errorHatches.Count > 0)
+                    {
+                        ed.SetImpliedSelection(errorHatches.ToArray());
+                        ed.SelectImplied(); // selecting bad hatches 
+                    }
+                    tr.Commit();
+                }
             }
         }
         internal static void CheckForBorderIntersections(string plotXref, string plotNumber)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
-            Editor ed = doc.Editor;
             List<DataElementModel> hatchModelList = new();
             List<DataElementModel> plineLengthModelList = new();
             List<DataElementModel> plineAreaModelList = new();
@@ -43,7 +196,7 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    Polyline plotBorder = GetPlotBorder(tr, plotXref, plotNumber);
+                    Polyline plotBorder = DataImport.GetPlotBorder(tr, plotXref, plotNumber);
                     if (plotBorder == null)
                     {
                         return;
@@ -256,7 +409,7 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    Polyline plotBorder = GetPlotBorder(tr, plotXref, plotNumber);
+                    Polyline plotBorder = DataImport.GetPlotBorder(tr, plotXref, plotNumber);
                     if (plotBorder == null)
                     {
                         return;

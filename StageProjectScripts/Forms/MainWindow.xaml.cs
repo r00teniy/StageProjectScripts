@@ -32,7 +32,6 @@ namespace StageProjectScripts.Forms
             {
                 plotsXRefComboBox.SelectedIndex = plotRef.IndexOf(Variables.savedData[1]);
                 plots = DataImport.GetAllLayersContainingString(Variables.plotLayers, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
-                plotsComboBox.SelectedIndex = 0;
             }
             plotsComboBox.ItemsSource = plots;
             if (Variables.savedData[2] != "" && plots.Where(x => x == Variables.savedData[2]).ToList().Count != 0)
@@ -48,12 +47,18 @@ namespace StageProjectScripts.Forms
 
         private void CalculateButton_Click(object sender, RoutedEventArgs e)
         {
-            Hide();
-            DataProcessing.CalculateVolumes(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
-            SettingsStorage.SaveData(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
-            Show();
+            if (baseXRefComboBox.SelectedItem != null && plotsXRefComboBox.SelectedItem != null && plotsComboBox.SelectedItem != null)
+            {
+                Hide();
+                DataProcessing.CalculateVolumes(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+                SettingsStorage.SaveData(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+                Show();
+            }
+            else
+            {
+                MessageBox.Show($"Необходимо выбрать файл основы, границ и номер ГПЗУ", "Ошибка", MessageBoxButton.OK);
+            }
         }
-
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -61,16 +66,30 @@ namespace StageProjectScripts.Forms
 
         private void LabelPavement_Click(object sender, RoutedEventArgs e)
         {
-            Hide();
-            DataProcessing.LabelPavements(baseXRefComboBox.SelectedItem.ToString());
-            Show();
+            if (baseXRefComboBox.SelectedItem != null)
+            {
+                Hide();
+                DataProcessing.LabelPavements(baseXRefComboBox.SelectedItem.ToString());
+                Show();
+            }
+            else
+            {
+                MessageBox.Show($"Необходимо выбрать файл основы", "Ошибка", MessageBoxButton.OK);
+            }
         }
 
         private void LabelGreenery_Click(object sender, RoutedEventArgs e)
         {
-            Hide();
-            DataProcessing.LabelGreenery();
-            Show();
+            if (baseXRefComboBox.SelectedItem != null)
+            {
+                Hide();
+                DataProcessing.LabelGreenery();
+                Show();
+            }
+            else
+            {
+                MessageBox.Show($"Необходимо выбрать файл основы", "Ошибка", MessageBoxButton.OK);
+            }
         }
     }
 }

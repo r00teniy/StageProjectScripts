@@ -12,9 +12,18 @@ internal static class SettingsStorage
         {
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
-                db.SetCustomProperty("Основа", xRefName);
-                db.SetCustomProperty("Границы", plotsName);
-                db.SetCustomProperty("ГПЗУ", plotNumber);
+                if (xRefName != "")
+                {
+                    db.SetCustomProperty("Основа", xRefName);
+                }
+                if (plotsName != "")
+                {
+                    db.SetCustomProperty("Границы", plotsName);
+                }
+                if (plotNumber != "")
+                {
+                    db.SetCustomProperty("ГПЗУ", plotNumber);
+                }
                 tr.Commit();
             }
         }

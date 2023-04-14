@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:StageProjectScripts.Forms"
         mc:Ignorable="d"
-        Title="Проверка элементов основы" FontSize="18" Height="300" Width="600" Topmost="True">
+        Title="Проверка элементов основы" FontSize="18" Height="350" Width="600" Topmost="True">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="50*"/>
@@ -15,7 +15,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
-
+            <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
@@ -57,25 +57,40 @@
                 Grid.ColumnSpan="2"
                 FontSize="14"
                 Content="Проверить пересечение с границей ГПЗУ"
-                Margin="10,5,10,5" Click="CheckIntersections_Click" />
+                Margin="10,5,10,5" 
+                Click="CheckIntersections_Click" />
         <Button x:Name="CheckHatches"
-                IsEnabled="false"
                 Grid.Row="3"
                 FontSize="14"
                 Grid.Column="0"
                 Content="Проверить штриховки на ошибки"
-                Margin="10,5,10,5" />
+                Margin="10,5,10,5" 
+                Click="CheckHatches_Click" />
         <!-- Row 4-->
-        <Button x:Name="CheckHatchIntersections"
+        <Button x:Name="CheckHatchSelfIntersections"
                 Grid.Row="4"
                 Grid.Column="0"
-                IsEnabled="false"
+                FontSize="13"
+                Content="Проверить штриховки на самопересечения"
+                Margin="10,5,10,5" 
+                Click="CheckHatchSelfIntersections_Click" />
+        <Button x:Name="CheckHatchIntersections"
+                Grid.Row="4"
+                Grid.Column="1"
+                Grid.ColumnSpan="2"
                 FontSize="14"
                 Content="Проверить штриховки на пересечения"
-                Margin="10,5,10,5" />
+                Margin="10,5,10,5" Click="CheckHatchIntersections_Click_1" />
+        <!-- Row 5-->
+        <Button x:Name="DeleteTempGeometry"
+                FontSize="14"
+                Content="Удалить временную геометрию"
+                Grid.Row="5"
+                Grid.Column="0"
+                Margin="10,5,10,5" Click="DeleteTempGeometry_Click" />
         <Button x:Name="CloseButton"
                 Content="Закрыть"
-                Grid.Row="4"
+                Grid.Row="5"
                 Grid.Column="1"
                 Grid.ColumnSpan="2"
                 Margin="10,5,10,5" Click="CloseButton_Click"/>
