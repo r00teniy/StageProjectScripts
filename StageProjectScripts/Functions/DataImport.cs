@@ -395,17 +395,17 @@ internal static class DataImport
         }
         return result;
     }
-        internal static Polyline GetPlotBorder(Transaction tr, string plotXref, string plotNumber)
+    internal static Polyline GetPlotBorder(string plotLayer, Transaction tr, string plotXref, string plotNumber)
+    {
+        var plotBorders = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, plotLayer + plotNumber.Replace(':', '_'), plotXref);
+        if (plotBorders.Count != 1)
         {
-            var plotBorders = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.plotLayers + plotNumber.Replace(':', '_'), plotXref);
-            if (plotBorders.Count != 1)
-            {
-                System.Windows.MessageBox.Show("На слое участка ГПЗУ должна быть ровно одна полилиния", "Error", System.Windows.MessageBoxButton.OK);
-                return null;
-            }
-            else
-            {
-                return plotBorders[0];
-            }
+            System.Windows.MessageBox.Show("На слое участка ГПЗУ должна быть ровно одна полилиния", "Error", System.Windows.MessageBoxButton.OK);
+            return null;
         }
+        else
+        {
+            return plotBorders[0];
+        }
+    }
 }

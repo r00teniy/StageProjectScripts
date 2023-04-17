@@ -1,6 +1,7 @@
 ﻿using Autodesk.AutoCAD.Runtime;
 
 using StageProjectScripts.Forms;
+using StageProjectScripts.Functions;
 
 [assembly: CommandClass(typeof(StageProjectScripts.MyCommands))]
 
@@ -11,15 +12,17 @@ namespace StageProjectScripts
         [CommandMethod("StageProjectScripts")]
         static public void StageProjectScripts()
         {
-            Variables.savedData = Functions.SettingsStorage.ReadData();
-            var MW = new MainWindow();
+            var variables = SettingsStorage.ReadSettingsFromXML();
+            variables.SavedData = SettingsStorage.ReadData();
+            var MW = new MainWindow(variables);
             MW.Show();
         }
         [CommandMethod("StageProjectChecks")]
         static public void StageProjectChecks()
         {
-            Variables.savedData = Functions.SettingsStorage.ReadData();
-            var CW = new ChecksWindow();
+            var variables = SettingsStorage.ReadSettingsFromXML();
+            variables.SavedData = SettingsStorage.ReadData();
+            var CW = new ChecksWindow(variables);
             CW.Show();
         }
     }

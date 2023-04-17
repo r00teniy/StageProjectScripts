@@ -14,7 +14,7 @@ namespace StageProjectScripts.Functions;
 
 internal class DataExport
 {
-    internal static void CreateTempCircleOnPoint(Transaction tr, List<Point3d> pts)
+    internal static void CreateTempCircleOnPoint(Variables variables, Transaction tr, List<Point3d> pts)
     {
         //temporary solution
         Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -23,13 +23,13 @@ internal class DataExport
         BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
         foreach (var pt in pts)
         {
-            LayerCheck(tr, Variables.tempLayer, Variables.tempLayerColor, Variables.tempLayerLineWeight, Variables.tempLayerPrintable);
+            LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
             using (Circle acCirc = new Circle())
             {
                 acCirc.Center = pt;
                 acCirc.Radius = 2;
-                acCirc.Color = Variables.tempLayerColor;
-                acCirc.Layer = Variables.tempLayer;
+                acCirc.Color = Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor);
+                acCirc.Layer = variables.TempLayer;
                 // Add the new object to the block table record and the transaction
                 btr.AppendEntity(acCirc);
                 tr.AddNewlyCreatedDBObject(acCirc, true);
@@ -97,7 +97,7 @@ internal class DataExport
 
     }
     //Function to clear temporary geometry
-    public static void ClearTemp()
+    public static void ClearTemp(Variables variables)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -110,7 +110,7 @@ internal class DataExport
                 foreach (ObjectId objectId in btr)
                 {
                     var obj = tr.GetObject(objectId, OpenMode.ForWrite, false, true) as Entity;
-                    if (obj.Layer == Variables.tempLayer) // Checking for temporary layer
+                    if (obj.Layer == variables.TempLayer) // Checking for temporary layer
                     {
                         obj.Erase();
                     }
@@ -203,12 +203,12 @@ internal class DataExport
             tr.AddNewlyCreatedDBObject(leader, true);
         }
     }
-    internal static void FillTableWithData(Transaction tr, List<DataElementModel> hatches, long tableHandle, int numberOfLines, string format)
+    internal static void FillTableWithData(Transaction tr, List<DataElementModel> hatches, string tableHandle, int numberOfLines, string format)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
         //Getting table objects
-        ObjectId id = db.GetObjectId(false, new Handle(tableHandle), 0);
+        ObjectId id = db.GetObjectId(false, new Handle(Convert.ToInt64(tableHandle, 16)), 0);
         //Fillling table
         var tabl = tr.GetObject(id, OpenMode.ForWrite) as Table;
         for (int i = 0; i < numberOfLines; i++)

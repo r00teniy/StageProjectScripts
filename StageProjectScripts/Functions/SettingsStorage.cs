@@ -1,9 +1,22 @@
-﻿using Autodesk.AutoCAD.ApplicationServices;
+﻿using System.Xml;
+using System.Xml.Serialization;
+
+using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 
 namespace StageProjectScripts.Functions;
 internal static class SettingsStorage
 {
+    internal static Variables ReadSettingsFromXML()
+    {
+        XmlSerializer serializer = new XmlSerializer(typeof(Variables));
+        Variables variables;
+        using (XmlReader reader = XmlReader.Create("StageProjectScriptSettings.xml"))
+        {
+            variables = (Variables)serializer.Deserialize(reader);
+        }
+        return variables;
+    }
     internal static void SaveData(string xRefName, string plotsName, string plotNumber)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;

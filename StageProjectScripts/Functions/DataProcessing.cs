@@ -5,6 +5,7 @@ using System.Reflection;
 
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.BoundaryRepresentation;
+using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
@@ -18,7 +19,7 @@ namespace StageProjectScripts.Functions
     internal static class DataProcessing
     {
         //Function to check hatches intersections
-        public static void HatchIntersections()
+        public static void HatchIntersections(Variables variables)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
@@ -33,8 +34,8 @@ namespace StageProjectScripts.Functions
                     List<Polyline> plines = new(); // list of hatch boundaries
                     //Finding intersecting Hatches
                     List<Hatch> hatches = new();
-                    var layersToCheck = Variables.laylistHatch.ToList();
-                    layersToCheck.AddRange(Variables.laylistPlA);
+                    var layersToCheck = variables.LaylistHatch.ToList();
+                    layersToCheck.AddRange(variables.LaylistPlA);
                     for (var i = 0; i < layersToCheck.Count; i++)
                     {
                         hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, layersToCheck[i]));
@@ -64,8 +65,8 @@ namespace StageProjectScripts.Functions
                             if (aReg != null && aReg.Area != 0)
                             {
                                 // checking if temporary layer exist, if not - creating it.
-                                DataExport.LayerCheck(tr, Variables.tempLayer, Variables.tempLayerColor, Variables.tempLayerLineWeight, Variables.tempLayerPrintable);
-                                aReg.Layer = Variables.tempLayer;
+                                DataExport.LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
+                                aReg.Layer = variables.TempLayer;
                                 // Adding region to modelspace
                                 btr.AppendEntity(aReg);
                                 tr.AddNewlyCreatedDBObject(aReg, true);
@@ -106,7 +107,7 @@ namespace StageProjectScripts.Functions
             }
             return null;
         }
-        internal static void CheckForHatchesWithBorderRestorationErrors()
+        internal static void CheckForHatchesWithBorderRestorationErrors(Variables variables)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
@@ -117,9 +118,9 @@ namespace StageProjectScripts.Functions
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
                     List<Hatch> hatches = new();
-                    for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                    for (var i = 0; i < variables.LaylistHatch.Length; i++)
                     {
-                        hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i]));
+                        hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i]));
                     }
                     foreach (var hat in hatches)
                     {
@@ -148,7 +149,7 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
-        internal static void CheckHatchesForSelfIntersections()
+        internal static void CheckHatchesForSelfIntersections(Variables variables)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
@@ -159,9 +160,9 @@ namespace StageProjectScripts.Functions
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
                     List<Hatch> hatches = new();
-                    for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                    for (var i = 0; i < variables.LaylistHatch.Length; i++)
                     {
-                        hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i]));
+                        hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i]));
                     }
                     foreach (var hat in hatches)
                     {
@@ -184,7 +185,7 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
-        internal static void CheckForBorderIntersections(string plotXref, string plotNumber)
+        internal static void CheckForBorderIntersections(Variables variables, string plotXref, string plotNumber)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
@@ -196,18 +197,18 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    Polyline plotBorder = DataImport.GetPlotBorder(tr, plotXref, plotNumber);
+                    Polyline plotBorder = DataImport.GetPlotBorder(variables.PlotLayer, tr, plotXref, plotNumber);
                     if (plotBorder == null)
                     {
                         return;
                     }
-                    List<Hatch>[] hatches = new List<Hatch>[Variables.laylistHatch.Length];
-                    for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                    List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
+                    for (var i = 0; i < variables.LaylistHatch.Length; i++)
                     {
-                        hatches[i] = DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i]);
+                        hatches[i] = DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i]);
                     }
                     //Checking hatches
-                    for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                    for (var i = 0; i < variables.LaylistHatch.Length; i++)
                     {
                         foreach (var hat in hatches[i])
                         {
@@ -218,14 +219,14 @@ namespace StageProjectScripts.Functions
                         }
                     }
                     //Checking polylines
-                    List<Polyline>[] polylinesForLines = new List<Polyline>[Variables.laylistPlL.Length + Variables.laylistPlA.Length - 1];
-                    for (var i = 0; i < Variables.laylistPlL.Length; i++)
+                    List<Polyline>[] polylinesForLines = new List<Polyline>[variables.LaylistPlL.Length + variables.LaylistPlA.Length - 1];
+                    for (var i = 0; i < variables.LaylistPlL.Length; i++)
                     {
-                        polylinesForLines[i] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.laylistPlL[i]);
+                        polylinesForLines[i] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlL[i]);
                     }
-                    for (int i = 1; i < Variables.laylistPlA.Length; i++)
+                    for (int i = 1; i < variables.LaylistPlA.Length; i++)
                     {
-                        polylinesForLines[Variables.laylistPlL.Length + i - 1] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.laylistPlA[i]);
+                        polylinesForLines[variables.LaylistPlL.Length + i - 1] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[i]);
                     }
                     for (var i = 0; i < polylinesForLines.Length; i++)
                     {
@@ -245,13 +246,13 @@ namespace StageProjectScripts.Functions
                     else
                     {
                         System.Windows.MessageBox.Show($"Найдено {errorPoints.Count} объектов, пересекающих границу ГПЗУ", "Error", System.Windows.MessageBoxButton.OK);
-                        DataExport.CreateTempCircleOnPoint(tr, errorPoints);
+                        DataExport.CreateTempCircleOnPoint(variables, tr, errorPoints);
                     }
                     tr.Commit();
                 }
             }
         }
-        internal static void LabelPavements(string xRef)
+        internal static void LabelPavements(Variables variables, string xRef)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
@@ -259,15 +260,15 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    List<Hatch>[] hatches = new List<Hatch>[Variables.laylistHatch.Length];
-                    for (var i = 0; i < Variables.pLabelValues.Length; i++)
+                    List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
+                    for (var i = 0; i < variables.PLabelValues.Length; i++)
                     {
-                        hatches[i] = DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i], xRef);
+                        hatches[i] = DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i], xRef);
                     }
                     List<string> texts = new();
                     List<Point3d> pts = new();
                     //filling lists with data
-                    for (var i = 0; i < Variables.pLabelValues.Length; i++)
+                    for (var i = 0; i < variables.PLabelValues.Length; i++)
                     {
                         foreach (var hat in hatches[i])
                         {
@@ -275,16 +276,16 @@ namespace StageProjectScripts.Functions
                             Extents3d extents = hat.GeometricExtents;
                             pts.Add(extents.MinPoint + (extents.MaxPoint - extents.MinPoint) / 2.0);
                             //adding label texts based on layer
-                            texts.Add(Variables.pLabelValues[i]);
+                            texts.Add(variables.PLabelValues[i]);
                         }
                     }
                     //creating MLeaders
-                    DataExport.CreateMleaderWithText(tr, texts, pts, Variables.pLabelLayer);
+                    DataExport.CreateMleaderWithText(tr, texts, pts, variables.PLabelLayer);
                     tr.Commit();
                 }
             }
         }
-        internal static void LabelGreenery()
+        internal static void LabelGreenery(Variables variables)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
@@ -292,11 +293,11 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    for (int i = 0; i < Variables.greeneryGroupingDistance.Length; i++)
+                    for (int i = 0; i < variables.GreeneryGroupingDistance.Length; i++)
                     {
-                        var greeneryBlocks = GroupBlocksByDistance(DataImport.GetBlocksPosition(tr, Variables.laylistBlockCount[i]), Variables.greeneryGroupingDistance[i]);
+                        var greeneryBlocks = GroupBlocksByDistance(DataImport.GetBlocksPosition(tr, variables.LaylistBlockCount[i]), variables.GreeneryGroupingDistance[i]);
                         // TODO: Add better grouping mechanism
-                        DataExport.CreateMleaderWithBlockForGroupOfobjects(tr, greeneryBlocks, Variables.greeneryId[i], Variables.greeneryMleaderStyleName, Variables.oLabelLayer, Variables.greeneryMleaderBlockName, Variables.greeneryAttr);
+                        DataExport.CreateMleaderWithBlockForGroupOfobjects(tr, greeneryBlocks, variables.GreeneryId[i], variables.GreeneryMleaderStyleName, variables.OLabelLayer, variables.GreeneryMleaderBlockName, variables.GreeneryAttr);
                     }
                     tr.Commit();
                 }
@@ -395,7 +396,7 @@ namespace StageProjectScripts.Functions
             }
             return GroupPoints;
         }
-        internal static void CalculateVolumes(string xRef, string plotXref, string plotNumber)
+        internal static void CalculateVolumes(Variables variables, string xRef, string plotXref, string plotNumber)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
@@ -409,7 +410,7 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    Polyline plotBorder = DataImport.GetPlotBorder(tr, plotXref, plotNumber);
+                    Polyline plotBorder = DataImport.GetPlotBorder(variables.PlotLayer, tr, plotXref, plotNumber);
                     if (plotBorder == null)
                     {
                         return;
@@ -417,12 +418,12 @@ namespace StageProjectScripts.Functions
                     //Getting data for Hatch table
                     try
                     {
-                        List<Hatch>[] hatches = new List<Hatch>[Variables.laylistHatch.Length];
-                        for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                        List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
+                        for (var i = 0; i < variables.LaylistHatch.Length; i++)
                         {
-                            hatches[i] = DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, Variables.laylistHatch[i], xRef);
+                            hatches[i] = DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i], xRef);
                         }
-                        for (var i = 0; i < Variables.laylistHatch.Length; i++)
+                        for (var i = 0; i < variables.LaylistHatch.Length; i++)
                         {
                             var hatchAreas = GetHatchArea(tr, hatches[i]);
                             var areHatchesInside = AreObjectsInsidePlot<Hatch>(plotBorder, hatches[i]);
@@ -432,7 +433,7 @@ namespace StageProjectScripts.Functions
                             }
                         }
                         //Filling hatch table
-                        DataExport.FillTableWithData(tr, hatchModelList, Variables.th, Variables.laylistHatch.Length, "0.##");
+                        DataExport.FillTableWithData(tr, hatchModelList, variables.Th, variables.LaylistHatch.Length, "0.##");
                     }
                     catch (System.Exception ex)
                     {
@@ -441,14 +442,14 @@ namespace StageProjectScripts.Functions
                     //Getting data for Polyline length table
                     try
                     {
-                        List<Polyline>[] polylinesForLines = new List<Polyline>[Variables.laylistPlL.Length];
-                        for (var i = 0; i < Variables.laylistPlL.Length; i++)
+                        List<Polyline>[] polylinesForLines = new List<Polyline>[variables.LaylistPlL.Length];
+                        for (var i = 0; i < variables.LaylistPlL.Length; i++)
                         {
-                            polylinesForLines[i] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.laylistPlL[i], xRef);
+                            polylinesForLines[i] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlL[i], xRef);
                         }
-                        for (var i = 0; i < Variables.laylistPlL.Length; i++)
+                        for (var i = 0; i < variables.LaylistPlL.Length; i++)
                         {
-                            var plineLengths = polylinesForLines[i].Select(x => x.Length / Variables.curbLineCount[i]).ToList();
+                            var plineLengths = polylinesForLines[i].Select(x => x.Length / variables.CurbLineCount[i]).ToList();
                             var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotBorder, polylinesForLines[i]);
                             for (var j = 0; j < polylinesForLines[i].Count; j++)
                             {
@@ -456,7 +457,7 @@ namespace StageProjectScripts.Functions
                             }
                         }
                         //Filling Polyline length table
-                        DataExport.FillTableWithData(tr, plineLengthModelList, Variables.tpl, Variables.laylistPlL.Length, "0");
+                        DataExport.FillTableWithData(tr, plineLengthModelList, variables.Tpl, variables.LaylistPlL.Length, "0");
                     }
                     catch (System.Exception ex)
                     {
@@ -465,10 +466,10 @@ namespace StageProjectScripts.Functions
                     //Getting data for Polyline area table
                     try
                     {
-                        List<Polyline>[] polylinesForAreas = new List<Polyline>[Variables.laylistPlA.Length];
-                        for (var i = 0; i < Variables.laylistPlA.Length; i++)
+                        List<Polyline>[] polylinesForAreas = new List<Polyline>[variables.LaylistPlA.Length];
+                        for (var i = 0; i < variables.LaylistPlA.Length; i++)
                         {
-                            polylinesForAreas[i] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, Variables.laylistPlA[i], xRef);
+                            polylinesForAreas[i] = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[i], xRef);
                         }
                         try
                         {
@@ -519,7 +520,7 @@ namespace StageProjectScripts.Functions
                             plineAreaModelList.Add(new DataElementModel(areaInside, 0, true));
                             plineAreaModelList.Add(new DataElementModel(areaOutside, 0, false));
                         }
-                        for (int i = 1; i < Variables.laylistPlA.Length; i++)
+                        for (int i = 1; i < variables.LaylistPlA.Length; i++)
                         {
                             var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotBorder, polylinesForAreas[i]);
                             for (int j = 0; j < polylinesForAreas[i].Count; j++)
@@ -530,7 +531,7 @@ namespace StageProjectScripts.Functions
                             }
                         }
                         //Filling Polyline length table
-                        DataExport.FillTableWithData(tr, plineAreaModelList, Variables.tpa, Variables.laylistPlA.Length, "0.##");
+                        DataExport.FillTableWithData(tr, plineAreaModelList, variables.Tpa, variables.LaylistPlA.Length, "0.##");
                     }
                     catch (System.Exception ex)
                     {
@@ -542,21 +543,21 @@ namespace StageProjectScripts.Functions
                         //Counting blocks including those in arrays
                         List<List<Point3d>> blockPositions = new();
                         List<List<bool>> areBlocksInside = new();
-                        for (int i = 0; i < Variables.laylistBlockCount.Length; i++)
+                        for (int i = 0; i < variables.LaylistBlockCount.Length; i++)
                         {
                             blockPositions.Add(new List<Point3d>());
-                            blockPositions[i] = DataImport.GetBlocksPosition(tr, Variables.laylistBlockCount[i]);
+                            blockPositions[i] = DataImport.GetBlocksPosition(tr, variables.LaylistBlockCount[i]);
                             areBlocksInside.Add(new List<bool>());
                             areBlocksInside[i] = AreObjectsInsidePlot(plotBorder, blockPositions[i]);
                         }
                         //Creating table data
-                        for (var i = 0; i < Variables.laylistBlockCount.Length; i++)
+                        for (var i = 0; i < variables.LaylistBlockCount.Length; i++)
                         {
                             normalBlocksModelList.Add(new DataElementModel(areBlocksInside[i].Where(x => x == true).Count(), i, true));
                             normalBlocksModelList.Add(new DataElementModel(areBlocksInside[i].Where(x => x == false).Count(), i, false));
                         }
                         //Filling Normal blocks table
-                        DataExport.FillTableWithData(tr, normalBlocksModelList, Variables.tbn, Variables.laylistBlockCount.Length, "0");
+                        DataExport.FillTableWithData(tr, normalBlocksModelList, variables.Tbn, variables.LaylistBlockCount.Length, "0");
                     }
                     catch (System.Exception ex)
                     {
@@ -566,13 +567,13 @@ namespace StageProjectScripts.Functions
                     try
                     {
                         //Counting blocks with parameters
-                        List<BlockReference>[] blocksWithParams = new List<BlockReference>[Variables.laylistBlockWithParams.Length];
-                        for (var i = 0; i < Variables.laylistBlockWithParams.Length; i++)
+                        List<BlockReference>[] blocksWithParams = new List<BlockReference>[variables.LaylistBlockWithParams.Length];
+                        for (var i = 0; i < variables.LaylistBlockWithParams.Length; i++)
                         {
-                            blocksWithParams[i] = DataImport.GetAllElementsOfTypeOnLayer<BlockReference>(tr, Variables.laylistBlockWithParams[i]);
+                            blocksWithParams[i] = DataImport.GetAllElementsOfTypeOnLayer<BlockReference>(tr, variables.LaylistBlockWithParams[i]);
                         }
                         var paramTableRow = 0;
-                        for (var i = 0; i < Variables.laylistBlockWithParams.Length; i++)
+                        for (var i = 0; i < variables.LaylistBlockWithParams.Length; i++)
                         {
                             var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotBorder, blocksWithParams[i]);
                             for (int j = 0; j < blocksWithParams[i].Count; j++)
@@ -582,24 +583,24 @@ namespace StageProjectScripts.Functions
                                 {
                                     DynamicBlockReferencePropertyCollection pc = br.DynamicBlockReferencePropertyCollection;
                                     //Checking if it has correct properties in correct places
-                                    if ((pc[Convert.ToInt32(Variables.blockDetailsParameters[i][1])].PropertyName == Variables.blockDetailsParameters[i][0]) && (Variables.blockDetailsParameters[i][2] == "-" || pc[Convert.ToInt32(Variables.blockDetailsParameters[i][3])].PropertyName == Variables.blockDetailsParameters[i][2]))
+                                    if ((pc[Convert.ToInt32(variables.BlockDetailsParameters[i][1])].PropertyName == variables.BlockDetailsParameters[i][0]) && (variables.BlockDetailsParameters[i][2] == "-" || pc[Convert.ToInt32(variables.BlockDetailsParameters[i][3])].PropertyName == variables.BlockDetailsParameters[i][2]))
                                     {
-                                        for (int k = 0; k < Variables.blockDetailsParametersVariants[i].Count; k++)
+                                        for (int k = 0; k < variables.BlockDetailsParametersVariants[i].Count; k++)
                                         {
                                             //Checking for property value to determine table row
-                                            if (pc[Convert.ToInt32(Variables.blockDetailsParameters[i][1])].Value.ToString() == Variables.blockDetailsParametersVariants[i][k])
+                                            if (pc[Convert.ToInt32(variables.BlockDetailsParameters[i][1])].Value.ToString() == variables.BlockDetailsParametersVariants[i][k])
                                             {
-                                                var amount = Variables.blockDetailsParameters[i][2] == "-" ? 1 : Convert.ToDouble(pc[Convert.ToInt32(Variables.blockDetailsParameters[i][3])].Value);
+                                                var amount = variables.BlockDetailsParameters[i][2] == "-" ? 1 : Convert.ToDouble(pc[Convert.ToInt32(variables.BlockDetailsParameters[i][3])].Value);
                                                 paramBlocksModelList.Add(new DataElementModel(amount, paramTableRow + k, areBlocksInside[j]));
                                             }
                                         }
                                     }
                                 }
                             }
-                            paramTableRow += Variables.blockDetailsParametersVariants[i].Count;
+                            paramTableRow += variables.BlockDetailsParametersVariants[i].Count;
                         }
                         //Filling blocks with parameters table
-                        DataExport.FillTableWithData(tr, paramBlocksModelList, Variables.tbp, paramTableRow, "0.##");
+                        DataExport.FillTableWithData(tr, paramBlocksModelList, variables.Tbp, paramTableRow, "0.##");
                     }
                     catch (System.Exception ex)
                     {
@@ -865,7 +866,7 @@ namespace StageProjectScripts.Functions
                             using (Point3dCollection p3ds = new Point3dCollection())
                             {
                                 foreach (Point2d p in n2fd.FitPoints) p3ds.Add(new Point3d(plane, p));
-                                using (Spline ent = new Spline(p3ds, new Vector3d(plane, n2fd.StartTangent), new Vector3d(plane, n2fd.EndTangent), /* n2fd.KnotParam, */  n2fd.Degree, n2fd.FitTolerance.EqualPoint))
+                                using (Spline ent = new Spline(p3ds, new Vector3d(plane, n2fd.StartTangent), new Vector3d(plane, n2fd.EndTangent), n2fd.Degree, n2fd.FitTolerance.EqualPoint))
                                 {
                                     looparea.JoinEntity(ent);
                                 }
