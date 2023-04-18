@@ -95,5 +95,10 @@ namespace StageProjectScripts.Forms
                 MessageBox.Show($"Необходимо выбрать файл основы", "Ошибка", MessageBoxButton.OK);
             }
         }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

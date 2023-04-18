@@ -94,5 +94,10 @@ namespace StageProjectScripts.Forms
             DataExport.ClearTemp(Variables);
             Show();
         }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

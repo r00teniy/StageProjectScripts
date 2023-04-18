@@ -22,11 +22,17 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <!-- Row 0-->
+        <Button x:Name="SettingsButton"
+                Grid.Row="0"
+                Content="Настройки"
+                Margin="10,5,10,5" 
+                Grid.ColumnSpan="2" Click="SettingsButton_Click"
+                />
         <Label Content="Данные для работы скриптов:"
                VerticalAlignment="Center"
                HorizontalAlignment="Center"
                Grid.Row="0" 
-               Grid.Column="1"
+               Grid.Column="2"
                Grid.ColumnSpan="2"/>
         <!-- Row 1-->
         <Label Content="Выберите файл основы: "
