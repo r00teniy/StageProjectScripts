@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:StageProjectScripts.Forms"
         mc:Ignorable="d"
-        Title="Работа со стадией П" FontSize="18" Height="300" Width="600" Topmost="True">
+        Title="Работа со стадией П" FontSize="18" Height="300" Width="600" Topmost="True" WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="13*"/>

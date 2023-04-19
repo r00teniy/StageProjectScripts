@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System;
+using System.Globalization;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace StageProjectScripts.Forms
@@ -27,7 +29,10 @@ namespace StageProjectScripts.Forms
             }
             for (var i = 0; i < curbsNumberOfLinesBoxList.Length; i++)
             {
-                curbsNumberOfLinesBoxList[i].Text = variables.CurbLineCount[i].ToString();
+                if (curbsNumberOfLinesBoxList[i] != null)
+                {
+                    curbsNumberOfLinesBoxList[i].Text = variables.CurbLineCount[i].ToString();
+                }
             }
             for (var i = 0; i < greeneryLabelBoxList.Length; i++)
             {
@@ -42,6 +47,37 @@ namespace StageProjectScripts.Forms
         private void CloseParams_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void SaveParams_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                for (var i = 0; i < pavementLabelBoxList.Length; i++)
+                {
+                    _variables.PLabelValues[i] = pavementLabelBoxList[i].Text;
+                }
+                for (var i = 0; i < curbsNumberOfLinesBoxList.Length; i++)
+                {
+                    if (curbsNumberOfLinesBoxList[i] != null)
+                    {
+                        _variables.CurbLineCount[i] = Convert.ToInt32(curbsNumberOfLinesBoxList[i].Text);
+                    }
+                }
+                for (var i = 0; i < greeneryLabelBoxList.Length; i++)
+                {
+                    _variables.GreeneryId[i] = greeneryLabelBoxList[i].Text;
+                }
+                for (var i = 0; i < greeneryGroupingDistanceBoxList.Length; i++)
+                {
+                    _variables.GreeneryGroupingDistance[i] = Convert.ToDouble(greeneryGroupingDistanceBoxList[i].Text.Replace(',', '.'), CultureInfo.InvariantCulture);
+                }
+                MessageBox.Show("Параметры сохранены, они будут использоваться до закрытия основного окна.", "Сообщение", MessageBoxButton.OK);
+            }
+            catch
+            {
+                MessageBox.Show("Что-то пошло не так, проверьте цифровые значения.", "Сообщение", MessageBoxButton.OK);
+            }
         }
     }
 }

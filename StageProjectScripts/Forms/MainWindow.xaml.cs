@@ -18,34 +18,34 @@ namespace StageProjectScripts.Forms
         private BindingList<string> plotRef = new(DataImport.GetXRefList());
         private List<string> plots = new();
 
-        public Variables Variables { get; set; }
+        public Variables _variables;
 
         public MainWindow(Variables variables)
         {
             InitializeComponent();
-            Variables = variables;
+            _variables = variables;
             //Base xRef List
             baseXRefComboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding() { Source = xRefs });
-            if (Variables.SavedData[0] != "" && xRefs.Where(x => x == Variables.SavedData[0]).ToList().Count != 0)
+            if (_variables.SavedData[0] != "" && xRefs.Where(x => x == _variables.SavedData[0]).ToList().Count != 0)
             {
-                baseXRefComboBox.SelectedIndex = xRefs.IndexOf(Variables.SavedData[0]);
+                baseXRefComboBox.SelectedIndex = xRefs.IndexOf(_variables.SavedData[0]);
             }
             //Plots xRefList
             plotsXRefComboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding() { Source = plotRef });
-            if (Variables.SavedData[1] != "" && plotRef.Where(x => x == Variables.SavedData[1]).ToList().Count != 0)
+            if (_variables.SavedData[1] != "" && plotRef.Where(x => x == _variables.SavedData[1]).ToList().Count != 0)
             {
-                plotsXRefComboBox.SelectedIndex = plotRef.IndexOf(Variables.SavedData[1]);
-                plots = DataImport.GetAllLayersContainingString(Variables.PlotLayer, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
+                plotsXRefComboBox.SelectedIndex = plotRef.IndexOf(_variables.SavedData[1]);
+                plots = DataImport.GetAllLayersContainingString(_variables.PlotLayer, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
             }
             plotsComboBox.ItemsSource = plots;
-            if (Variables.SavedData[2] != "" && plots.Where(x => x == Variables.SavedData[2]).ToList().Count != 0)
+            if (_variables.SavedData[2] != "" && plots.Where(x => x == _variables.SavedData[2]).ToList().Count != 0)
             {
-                plotsComboBox.SelectedIndex = plots.IndexOf(Variables.SavedData[2]);
+                plotsComboBox.SelectedIndex = plots.IndexOf(_variables.SavedData[2]);
             }
         }
         private void plotsXRefComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            plotsComboBox.ItemsSource = DataImport.GetAllLayersContainingString(Variables.PlotLayer, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
+            plotsComboBox.ItemsSource = DataImport.GetAllLayersContainingString(_variables.PlotLayer, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
             plotsComboBox.SelectedIndex = 0;
         }
 
@@ -54,7 +54,7 @@ namespace StageProjectScripts.Forms
             if (baseXRefComboBox.SelectedItem != null && plotsXRefComboBox.SelectedItem != null && plotsComboBox.SelectedItem != null)
             {
                 Hide();
-                DataProcessing.CalculateVolumes(Variables, baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+                DataProcessing.CalculateVolumes(_variables, baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
                 SettingsStorage.SaveData(baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
                 Show();
             }
@@ -73,7 +73,7 @@ namespace StageProjectScripts.Forms
             if (baseXRefComboBox.SelectedItem != null)
             {
                 Hide();
-                DataProcessing.LabelPavements(Variables, baseXRefComboBox.SelectedItem.ToString());
+                DataProcessing.LabelPavements(_variables, baseXRefComboBox.SelectedItem.ToString());
                 Show();
             }
             else
@@ -87,7 +87,7 @@ namespace StageProjectScripts.Forms
             if (baseXRefComboBox.SelectedItem != null)
             {
                 Hide();
-                DataProcessing.LabelGreenery(Variables);
+                DataProcessing.LabelGreenery(_variables);
                 Show();
             }
             else
@@ -98,7 +98,8 @@ namespace StageProjectScripts.Forms
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-
+            SettingsWindow SW = new SettingsWindow(ref _variables);
+            SW.Show();
         }
     }
 }
