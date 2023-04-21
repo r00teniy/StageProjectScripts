@@ -24,11 +24,16 @@ namespace StageProjectScripts.Forms
         {
             InitializeComponent();
             _variables = variables;
+            CalculateButton.IsEnabled = false;
+            LabelPavement.IsEnabled = false;
+            LabelGreenery.IsEnabled = false;
             //Base xRef List
             baseXRefComboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding() { Source = xRefs });
             if (_variables.SavedData[0] != "" && xRefs.Where(x => x == _variables.SavedData[0]).ToList().Count != 0)
             {
                 baseXRefComboBox.SelectedIndex = xRefs.IndexOf(_variables.SavedData[0]);
+                LabelPavement.IsEnabled = true;
+                LabelGreenery.IsEnabled = true;
             }
             //Plots xRefList
             plotsXRefComboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding() { Source = plotRef });
@@ -41,6 +46,7 @@ namespace StageProjectScripts.Forms
             if (_variables.SavedData[2] != "" && plots.Where(x => x == _variables.SavedData[2]).ToList().Count != 0)
             {
                 plotsComboBox.SelectedIndex = plots.IndexOf(_variables.SavedData[2]);
+                CalculateButton.IsEnabled = true;
             }
         }
         private void plotsXRefComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -100,6 +106,20 @@ namespace StageProjectScripts.Forms
         {
             SettingsWindow SW = new SettingsWindow(ref _variables);
             SW.Show();
+        }
+
+        private void baseXRefComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            LabelPavement.IsEnabled = true;
+            LabelGreenery.IsEnabled = true;
+        }
+
+        private void plotsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (baseXRefComboBox.SelectedIndex >= 0)
+            {
+                CalculateButton.IsEnabled = true;
+            }
         }
     }
 }

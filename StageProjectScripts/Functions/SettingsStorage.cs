@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System.Reflection;
+using System.Xml;
 using System.Xml.Serialization;
 
 using Autodesk.AutoCAD.ApplicationServices;
@@ -11,7 +12,7 @@ internal static class SettingsStorage
     {
         XmlSerializer serializer = new XmlSerializer(typeof(Variables));
         Variables variables;
-        using (XmlReader reader = XmlReader.Create("StageProjectScriptSettings.xml"))
+        using (XmlReader reader = XmlReader.Create(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\StageProjectScriptSettings.xml"))
         {
             variables = (Variables)serializer.Deserialize(reader);
         }

@@ -55,11 +55,10 @@ namespace StageProjectScripts.Functions
                             }
                         }
                     }
-                    int sCount = 1; // starting number for second for, so we won't repeat intersections we already did
                     List<ObjectId> intersections = new();
                     for (int i = 0; i < plines.Count; i++)
                     {
-                        for (int j = sCount; j < plines.Count - 1; j++) // we don't need to intersect last one
+                        for (int j = i + 1; j < plines.Count - 1; j++) // we don't need to intersect last one
                         {
                             Region aReg = IntersectionRegionFromTwoPolylines(plines[i], plines[j]);
                             if (aReg != null && aReg.Area != 0)
@@ -77,7 +76,6 @@ namespace StageProjectScripts.Functions
                                 aReg.Dispose();
                             }
                         }
-                        sCount++; // adding one so it would start intersecting from next one
                     }
                     System.Windows.MessageBox.Show($"Найдено {intersections.Count} пересечений штриховок", "Сообщение", System.Windows.MessageBoxButton.OK);
                     if (intersections.Count > 0)
