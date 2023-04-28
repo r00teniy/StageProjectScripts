@@ -73,7 +73,10 @@ namespace StageProjectScripts.Functions
                             }
                             else
                             {
-                                aReg.Dispose();
+                                if (aReg != null)
+                                {
+                                    aReg.Dispose();
+                                }
                             }
                         }
                     }
@@ -94,15 +97,23 @@ namespace StageProjectScripts.Functions
             DBObjectCollection c2 = new DBObjectCollection();
             c1.Add(pl1);
             c2.Add(pl2);
-            var r1 = Region.CreateFromCurves(c1);
-            var r2 = Region.CreateFromCurves(c2);
-            if (r1 != null && r2 != null && r1.Count != 0 && r2.Count != 0)
+            try
             {
-                Region r11 = r1.Cast<Region>().First(); //region from first polyline
-                Region r21 = r2.Cast<Region>().First(); // region from second polyline
-                r11.BooleanOperation(BooleanOperationType.BoolIntersect, r21); // Creating intersection in first one
-                return r11;
+                var r1 = Region.CreateFromCurves(c1);
+                var r2 = Region.CreateFromCurves(c2);
+                if (r1 != null && r2 != null && r1.Count != 0 && r2.Count != 0)
+                {
+                    Region r11 = r1.Cast<Region>().First(); //region from first polyline
+                    Region r21 = r2.Cast<Region>().First(); // region from second polyline
+                    r11.BooleanOperation(BooleanOperationType.BoolIntersect, r21); // Creating intersection in first one
+                    return r11;
+                }
             }
+            catch
+            {
+                System.Windows.MessageBox.Show("Ошибка создания региона", "Сообщение", System.Windows.MessageBoxButton.OK);
+            }
+
             return null;
         }
         internal static void CheckForHatchesWithBorderRestorationErrors(Variables variables)
