@@ -40,63 +40,157 @@ namespace StageProjectScripts.Functions
                     {
                         hatches.AddRange(DataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, layersToCheck[i]));
                     }
-                    foreach (var hat in hatches)
+                    int regionErrors = 0;
+                    List<Region> regions = new();
+                    for (var i = 0; i < hatches.Count; i++)
                     {
-                        // can't instersec hatches, get polyline and intersect them or just get curves for each loop and intersect them??
-                        Plane plane = hat.GetPlane();
-                        int nLoops = hat.NumberOfLoops;
-                        for (int k = 0; k < nLoops; k++)
+                        try
                         {
-                            HatchLoop loop = hat.GetLoopAt(k);
-                            var tmp = GetBorderFromHatchLoop(loop, plane); // getting polyline boundary of a hatch
-                            if (tmp != null)
+                            // can't instersec hatches, get polyline and intersect them or just get curves for each loop and intersect them??
+                            Plane plane = hatches[i].GetPlane();
+                            Region region = null;
+                            if (hatches[i].GetLoopAt(0).LoopType == HatchLoopTypes.External)
                             {
-                                plines.Add(tmp);
+                                //first loop as a start
+                                DBObjectCollection loopColl = new DBObjectCollection();
+                                var tmp = GetBorderFromHatchLoop(hatches[i].GetLoopAt(0), plane);
+                                loopColl.Add(tmp);
+                                var r1 = Region.CreateFromCurves(loopColl);
+                                region = r1.Cast<Region>().First();
+                                //for rest of loops
+                                int nLoops = hatches[i].NumberOfLoops;
+                                for (int k = 1; k < nLoops; k++)
+                                {
+                                    var loop = hatches[i].GetLoopAt(k);
+                                    DBObjectCollection loopCollNew = new DBObjectCollection();
+                                    var tmp2 = GetBorderFromHatchLoop(loop, plane);
+                                    loopColl.Add(tmp2);
+                                    if (loop.LoopType == HatchLoopTypes.External)
+                                    {
+                                        var r2 = Region.CreateFromCurves(loopColl);
+                                        Region region2 = r2.Cast<Region>().First();
+                                        regions.Add(region2);
+                                    }
+                                    else
+                                    {
+                                        var r2 = Region.CreateFromCurves(loopColl);
+                                        Region region2 = r2.Cast<Region>().First();
+                                        region.BooleanOperation(BooleanOperationType.BoolSubtract, region2);
+                                    }
+                                }
                             }
+                            else
+                            {
+                                HatchLoop externalLoop;
+                                int hatchLoopId = 0;
+                                for (int j = 0; j < hatches[i].NumberOfLoops; j++)
+                                {
+                                    if (hatches[i].LoopTypeAt(j) == HatchLoopTypes.External)
+                                    {
+                                        externalLoop = hatches[i].GetLoopAt(j);
+                                        hatchLoopId = j;
+                                        break;
+                                    }
+                                }
+                                //first loop as a start
+                                DBObjectCollection loopColl = new DBObjectCollection();
+                                //getting external loop we found
+                                var tmp = GetBorderFromHatchLoop(hatches[i].GetLoopAt(hatchLoopId), plane);
+                                loopColl.Add(tmp);
+                                var r1 = Region.CreateFromCurves(loopColl);
+                                region = r1.Cast<Region>().First();
+                                for (int k = 0; k < hatches[i].NumberOfLoops; k++)
+                                {
+                                    if (k != hatchLoopId)
+                                    {
+                                        var loop = hatches[i].GetLoopAt(k);
+                                        DBObjectCollection loopCollNew = new DBObjectCollection();
+                                        var tmp2 = GetBorderFromHatchLoop(loop, plane);
+                                        loopColl.Add(tmp2);
+                                        if (loop.LoopType == HatchLoopTypes.External)
+                                        {
+                                            var r2 = Region.CreateFromCurves(loopColl);
+                                            Region region2 = r2.Cast<Region>().First();
+                                            regions.Add(region2);
+                                            System.Windows.MessageBox.Show($"Штриховки с несколькими внешними границами и дырами не поддерживаются, необходимо переделать штриховку чтобы исключить одновременное использование нескольких внешних границ и внутренней", "Сообщение", System.Windows.MessageBoxButton.OK);
+                                        }
+                                        else
+                                        {
+                                            var r2 = Region.CreateFromCurves(loopColl);
+                                            Region region2 = r2.Cast<Region>().First();
+                                            region.BooleanOperation(BooleanOperationType.BoolSubtract, region2);
+                                        }
+                                    }
+                                }
+
+                            }
+                            regions.Add(region);
+                        }
+                        catch
+                        {
+                            regionErrors++;
                         }
                     }
                     List<ObjectId> intersections = new();
-                    for (int i = 0; i < plines.Count; i++)
+                    for (var i = 0; i < regions.Count - 1; i++)
                     {
-                        for (int j = i + 1; j < plines.Count - 1; j++) // we don't need to intersect last one
+                        for (int j = i + 1; j < regions.Count; j++)
                         {
-                            Region aReg = IntersectionRegionFromTwoPolylines(plines[i], plines[j]);
-                            if (aReg != null && aReg.Area != 0)
+                            var aReg = regions[i].Clone() as Region;
+                            var aReg2 = regions[j].Clone() as Region;
+                            aReg.BooleanOperation(BooleanOperationType.BoolIntersect, aReg2);
+                            if (aReg != null && aReg.Area >= 0.01)
                             {
                                 // checking if temporary layer exist, if not - creating it.
                                 DataExport.LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
                                 aReg.Layer = variables.TempLayer;
-                                // Adding region to modelspace
                                 btr.AppendEntity(aReg);
                                 tr.AddNewlyCreatedDBObject(aReg, true);
                                 intersections.Add(aReg.ObjectId);
                             }
                             else
                             {
-                                if (aReg != null)
-                                {
-                                    aReg.Dispose();
-                                }
+                                aReg.Dispose();
                             }
+                            aReg2.Dispose();
                         }
                     }
-                    System.Windows.MessageBox.Show($"Найдено {intersections.Count} пересечений штриховок", "Сообщение", System.Windows.MessageBoxButton.OK);
+
+                    if (regionErrors != 0)
+                    {
+                        System.Windows.MessageBox.Show($"Найдено {intersections.Count} пересечений штриховок, найдено {regionErrors} штриховок для которых не возможно проверить пересечения, необходимо их проверить или пересоздать", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show($"Найдено {intersections.Count} пересечений штриховок", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    }
                     if (intersections.Count > 0)
                     {
                         ed.SetImpliedSelection(intersections.ToArray());
-                        ed.SelectImplied(); // selecting bad hatches 
+                        ed.SelectImplied();
                     }
                     tr.Commit();
                 }
             }
         }
         //Function finding intersection region of 2 polylines
-        public static Region IntersectionRegionFromTwoPolylines(Polyline pl1, Polyline pl2)
+        public static Region CreateRegionFromPolyline(Polyline pl)
         {
             DBObjectCollection c1 = new DBObjectCollection();
-            DBObjectCollection c2 = new DBObjectCollection();
-            c1.Add(pl1);
-            c2.Add(pl2);
+            c1.Add(pl);
+            try
+            {
+                var r1 = Region.CreateFromCurves(c1);
+                Region output = r1.Cast<Region>().First();
+                return output;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        public static Region IntersectionRegionOfPolylines(DBObjectCollection c1, DBObjectCollection c2)
+        {
             try
             {
                 var r1 = Region.CreateFromCurves(c1);
@@ -109,11 +203,7 @@ namespace StageProjectScripts.Functions
                     return r11;
                 }
             }
-            catch
-            {
-                System.Windows.MessageBox.Show("Ошибка создания региона", "Сообщение", System.Windows.MessageBoxButton.OK);
-            }
-
+            catch { }
             return null;
         }
         internal static void CheckForHatchesWithBorderRestorationErrors(Variables variables)
@@ -140,7 +230,11 @@ namespace StageProjectScripts.Functions
                             {
                                 HatchLoop loop = hat.GetLoopAt(k);
                                 HatchLoopTypes hlt = hat.LoopTypeAt(k);
-                                Polyline looparea = GetBorderFromHatchLoop(loop, plane);
+                                Polyline loopArea = GetBorderFromHatchLoop(loop, plane);
+                                if (CreateRegionFromPolyline(loopArea) == null)
+                                {
+                                    errorHatches.Add(hat.ObjectId);
+                                }
                             }
                         }
                         catch
