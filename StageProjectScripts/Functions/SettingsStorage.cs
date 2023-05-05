@@ -6,11 +6,11 @@ using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 
 namespace StageProjectScripts.Functions;
-internal static class SettingsStorage
+internal class SettingsStorage
 {
-    internal static Variables ReadSettingsFromXML()
+    internal Variables ReadSettingsFromXML()
     {
-        XmlSerializer serializer = new XmlSerializer(typeof(Variables));
+        XmlSerializer serializer = new(typeof(Variables));
         Variables variables;
         using (XmlReader reader = XmlReader.Create(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\StageProjectScriptSettings.xml"))
         {
@@ -18,7 +18,7 @@ internal static class SettingsStorage
         }
         return variables;
     }
-    internal static void SaveData(string xRefName, string plotsName, string plotNumber)
+    internal void SaveData(string xRefName, string plotsName, string plotNumber)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -42,7 +42,7 @@ internal static class SettingsStorage
             }
         }
     }
-    internal static string[] ReadData()
+    internal string[] ReadData()
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;

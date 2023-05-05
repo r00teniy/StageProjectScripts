@@ -13,13 +13,13 @@ using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 
 namespace StageProjectScripts.Functions;
 
-internal static class DataImport
+internal class DataImport
 {
-    public static List<T> GetAllElementsOfTypeInDrawing<T>(Transaction tr, string xrefName = null, bool everywhere = false) where T : Entity
+    Document doc = Application.DocumentManager.MdiActiveDocument;
+    Database db = Application.DocumentManager.MdiActiveDocument.Database;
+    public List<T> GetAllElementsOfTypeInDrawing<T>(Transaction tr, string xrefName = null, bool everywhere = false) where T : Entity
     {
         List<T> output = new();
-        Document doc = Application.DocumentManager.MdiActiveDocument;
-        Database db = doc.Database;
         var xrefList = new List<XrefGraphNode>();
         var btrList = new List<BlockTableRecord>();
         var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
@@ -75,10 +75,9 @@ internal static class DataImport
         }
         return output;
     }
-    public static List<T> GetAllElementsOfTypeOnLayer<T>(Transaction tr, string layer, string xrefName = null, bool everywhere = false) where T : Entity
+    public List<T> GetAllElementsOfTypeOnLayer<T>(Transaction tr, string layer, string xrefName = null, bool everywhere = false) where T : Entity
     {
-        Document doc = Application.DocumentManager.MdiActiveDocument;
-        Database db = doc.Database;
+
         List<T> output = new();
         var xrefList = new List<XrefGraphNode>();
         var btrList = new List<BlockTableRecord>();
@@ -132,11 +131,9 @@ internal static class DataImport
         return output;
     }
     //Getting block insertion points, including arrays
-    public static List<Point3d> GetBlocksPosition(Transaction tr, string layerName, string xrefName = null, bool everywhere = false)
+    public List<Point3d> GetBlocksPosition(Transaction tr, string layerName, string xrefName = null, bool everywhere = false)
     {
-        List<Point3d> pointsList = new List<Point3d>();
-        Document doc = Application.DocumentManager.MdiActiveDocument;
-        Database db = doc.Database;
+        List<Point3d> pointsList = new();
         var xrefList = new List<XrefGraphNode>();
         var btrList = new List<BlockTableRecord>();
         var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
@@ -249,8 +246,8 @@ internal static class DataImport
                                     var basePt = bRef.Position;
                                     double[] mat1 = { 1.0, 0.0, 0.0, basePt.X, 0.0, 1.0, 0.0, basePt.Y, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
                                     double[] mat2 = { 1.0, 0.0, 0.0, -basePt.X, 0.0, 1.0, 0.0, -basePt.Y, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
-                                    Matrix3d mat13d = new Matrix3d(mat1);
-                                    Matrix3d mat23d = new Matrix3d(mat2);
+                                    Matrix3d mat13d = new(mat1);
+                                    Matrix3d mat23d = new(mat2);
                                     var basePtB = basePt.TransformBy(mat23d);
                                     var locators = array.getItems(true);
                                     foreach (var loc in locators)
@@ -273,10 +270,8 @@ internal static class DataImport
         return pointsList;
     }
     //Method to get all layer names containing provided string
-    public static List<string> GetAllLayersContainingString(string str, string xRef = null)
+    public List<string> GetAllLayersContainingString(string str, string xRef = null)
     {
-        Document doc = Application.DocumentManager.MdiActiveDocument;
-        Database db = doc.Database;
         List<string> output = new();
         using (Transaction tr = db.TransactionManager.StartTransaction())
         {
@@ -298,19 +293,16 @@ internal static class DataImport
         return output;
     }
     //Propmpting user for insertion point
-    public static Point3d GetInsertionPoint()
+    public Point3d GetInsertionPoint()
     {
-        Document doc = Application.DocumentManager.MdiActiveDocument;
         Editor ed = doc.Editor;
         PromptPointOptions pPtOpts = new("\nВыберете точку положения таблицы: ");
         return ed.GetPoint(pPtOpts).Value;
     }
 
     //Method to get all attributes from a block
-    public static List<Dictionary<string, string>> GetAllAttributesFromBlockReferences(Transaction tr, List<BlockReference> brList)
+    public List<Dictionary<string, string>> GetAllAttributesFromBlockReferences(Transaction tr, List<BlockReference> brList)
     {
-        Document doc = Application.DocumentManager.MdiActiveDocument;
-        Database db = doc.Database;
         var output = new List<Dictionary<string, string>>();
         for (var i = 0; i < brList.Count; i++)
         {
@@ -326,11 +318,9 @@ internal static class DataImport
         return output;
     }
     //Getting all xRefs for GUI
-    internal static List<string> GetXRefList()
+    internal List<string> GetXRefList()
     {
         List<string> output = new();
-        Document doc = Application.DocumentManager.MdiActiveDocument;
-        Database db = doc.Database;
         XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
         for (int i = 1; i < XrGraph.NumNodes; i++)
         {
@@ -339,7 +329,7 @@ internal static class DataImport
         return output;
     }
     //Functions to check if something is inside polyline
-    internal static PointContainment CheckIfObjectIsInsidePolyline(Polyline pl, Object obj)
+    internal PointContainment CheckIfObjectIsInsidePolyline(Polyline pl, Object obj)
     {
         Point3d pt = new(0, 0, 0);
         Curve cur = (Curve)pl;
@@ -352,12 +342,14 @@ internal static class DataImport
             return GetPointContainment(region, pt);
         }
     }
-    private static Region RegionFromClosedCurve(Curve curve)
+    private Region RegionFromClosedCurve(Curve curve)
     {
         if (!curve.Closed)
             throw new ArgumentException("Curve must be closed.");
-        DBObjectCollection curves = new();
-        curves.Add(curve);
+        DBObjectCollection curves = new()
+        {
+            curve
+        };
         using (DBObjectCollection regions = Region.CreateFromCurves(curves))
         {
             if (regions == null || regions.Count == 0)
@@ -367,7 +359,7 @@ internal static class DataImport
             return regions.Cast<Region>().First();
         }
     }
-    internal static PointContainment GetPointContainment(Curve curve, Point3d point)
+    internal PointContainment GetPointContainment(Curve curve, Point3d point)
     {
         if (!curve.Closed)
             throw new ArgumentException("Curve must be closed.");
@@ -377,7 +369,7 @@ internal static class DataImport
         using (region)
         { return GetPointContainment(region, point); }
     }
-    private static PointContainment GetPointContainment(Region region, Point3d point)
+    private PointContainment GetPointContainment(Region region, Point3d point)
     {
         PointContainment result = PointContainment.Outside;
         using (Brep brep = new(region))
@@ -395,9 +387,9 @@ internal static class DataImport
         }
         return result;
     }
-    internal static Polyline GetPlotBorder(string plotLayer, Transaction tr, string plotXref, string plotNumber)
+    internal Polyline GetPlotBorder(string plotLayer, Transaction tr, string plotXref, string plotNumber)
     {
-        var plotBorders = DataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, plotLayer + plotNumber.Replace(':', '_'), plotXref);
+        var plotBorders = GetAllElementsOfTypeOnLayer<Polyline>(tr, plotLayer + plotNumber.Replace(':', '_'), plotXref);
         if (plotBorders.Count != 1)
         {
             System.Windows.MessageBox.Show("На слое участка ГПЗУ должна быть ровно одна полилиния", "Error", System.Windows.MessageBoxButton.OK);

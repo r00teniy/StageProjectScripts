@@ -14,7 +14,7 @@ namespace StageProjectScripts.Functions;
 
 internal class DataExport
 {
-    internal static void CreateTempCircleOnPoint(Variables variables, Transaction tr, List<Point3d> pts)
+    internal void CreateTempCircleOnPoint(Variables variables, Transaction tr, List<Point3d> pts)
     {
         //temporary solution
         Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -24,7 +24,7 @@ internal class DataExport
         foreach (var pt in pts)
         {
             LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
-            using (Circle acCirc = new Circle())
+            using (Circle acCirc = new())
             {
                 acCirc.Center = pt;
                 acCirc.Radius = 2;
@@ -36,7 +36,7 @@ internal class DataExport
             }
         }
     }
-    internal static bool SetBlockAttribute(BlockReference block, string attrName, string attrValue)
+    internal bool SetBlockAttribute(BlockReference block, string attrName, string attrValue)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -65,7 +65,7 @@ internal class DataExport
         return false;
     }
     //Creating Mleader with text
-    internal static void CreateMleaderWithText(Transaction tr, List<string> texts, List<Point3d> pts, string layer)
+    internal void CreateMleaderWithText(Transaction tr, List<string> texts, List<Point3d> pts, string layer)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -75,11 +75,11 @@ internal class DataExport
         for (int i = 0; i < texts.Count; i++)
         {
             //createing Mleader
-            MLeader leader = new MLeader();
+            MLeader leader = new();
             leader.SetDatabaseDefaults();
             leader.ContentType = ContentType.MTextContent;
             leader.Layer = layer;
-            MText mText = new MText();
+            MText mText = new();
             mText.SetDatabaseDefaults();
             mText.Width = 0.675;
             mText.Height = 1.25;
@@ -97,7 +97,7 @@ internal class DataExport
 
     }
     //Function to clear temporary geometry
-    public static void ClearTemp(Variables variables)
+    public void ClearTemp(Variables variables)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -120,7 +120,7 @@ internal class DataExport
         }
     }
     //Function to check if layer exist and create if not
-    public static void LayerCheck(Transaction tr, string layer, Color color, double lw, Boolean isPlottable)
+    public void LayerCheck(Transaction tr, string layer, Color color, double lw, Boolean isPlottable)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -140,7 +140,7 @@ internal class DataExport
             tr.AddNewlyCreatedDBObject(newLayer, true);
         }
     }
-    internal static void CreateMleaderWithBlockForGroupOfobjects(Transaction tr, List<List<Point3d>> pointList, string id, string style, string layer, string blockName, string[] attr)
+    internal void CreateMleaderWithBlockForGroupOfobjects(Transaction tr, List<List<Point3d>> pointList, string id, string style, string layer, string blockName, string[] attr)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -183,7 +183,7 @@ internal class DataExport
                 AttributeDefinition AttributeDef = tr.GetObject(blkEntId, OpenMode.ForRead) as AttributeDefinition;
                 if (AttributeDef != null)
                 {
-                    AttributeReference AttributeRef = new AttributeReference();
+                    AttributeReference AttributeRef = new();
                     AttributeRef.SetAttributeFromBlock(AttributeDef, Transfo);
                     AttributeRef.Position = AttributeDef.Position.TransformBy(Transfo);
                     // setting attributes
@@ -203,7 +203,7 @@ internal class DataExport
             tr.AddNewlyCreatedDBObject(leader, true);
         }
     }
-    internal static void FillTableWithData(Transaction tr, List<DataElementModel> hatches, string tableHandle, int numberOfLines, string format)
+    internal void FillTableWithData(Transaction tr, List<DataElementModel> hatches, string tableHandle, int numberOfLines, string format)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;

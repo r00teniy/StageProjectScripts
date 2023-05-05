@@ -14,19 +14,22 @@ namespace StageProjectScripts.Forms
     /// </summary>
     public partial class ChecksWindow : Window
     {
-        private BindingList<string> plotRef = new(DataImport.GetXRefList());
+        private DataImport _dataImport;
+        private BindingList<string> plotRef;
         private List<string> plots = new();
         public Variables Variables { get; set; }
         public ChecksWindow(Variables variables)
         {
             InitializeComponent();
             Variables = variables;
+            _dataImport = new DataImport();
             //Plots xRefList
+            plotRef = new(_dataImport.GetXRefList());
             plotsXRefComboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding() { Source = plotRef });
             if (Variables.SavedData[1] != "" && plotRef.Where(x => x == Variables.SavedData[1]).ToList().Count != 0)
             {
                 plotsXRefComboBox.SelectedIndex = plotRef.IndexOf(Variables.SavedData[1]);
-                plots = DataImport.GetAllLayersContainingString(Variables.PlotLayer, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
+                plots = _dataImport.GetAllLayersContainingString(Variables.PlotLayer, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
                 plotsComboBox.SelectedIndex = 0;
             }
             plotsComboBox.ItemsSource = plots;
@@ -37,7 +40,7 @@ namespace StageProjectScripts.Forms
         }
         private void plotsXRefComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            plotsComboBox.ItemsSource = DataImport.GetAllLayersContainingString(Variables.PlotLayer, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
+            plotsComboBox.ItemsSource = _dataImport.GetAllLayersContainingString(Variables.PlotLayer, plotsXRefComboBox.SelectedItem.ToString()).Select(x => x.Replace('_', ':')).ToList();
             plotsComboBox.SelectedIndex = 0;
         }
 
@@ -47,8 +50,10 @@ namespace StageProjectScripts.Forms
             {
                 Hide();
                 Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
-                SettingsStorage.SaveData("", plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
-                DataProcessing.CheckForBorderIntersections(Variables, plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+                var settingsStorage = new SettingsStorage();
+                settingsStorage.SaveData("", plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+                var dataProcessing = new DataProcessing();
+                dataProcessing.CheckForBorderIntersections(Variables, plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
                 Show();
             }
             else
@@ -67,7 +72,8 @@ namespace StageProjectScripts.Forms
         {
             Hide();
             Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
-            DataProcessing.CheckHatchesForSelfIntersections(Variables);
+            var dataProcessing = new DataProcessing();
+            dataProcessing.CheckHatchesForSelfIntersections(Variables);
             Show();
         }
 
@@ -75,7 +81,8 @@ namespace StageProjectScripts.Forms
         {
             Hide();
             Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
-            DataProcessing.CheckForHatchesWithBorderRestorationErrors(Variables);
+            var dataProcessing = new DataProcessing();
+            dataProcessing.CheckForHatchesWithBorderRestorationErrors(Variables);
             Show();
         }
 
@@ -83,7 +90,8 @@ namespace StageProjectScripts.Forms
         {
             Hide();
             Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
-            DataProcessing.HatchIntersections(Variables);
+            var dataProcessing = new DataProcessing();
+            dataProcessing.HatchIntersections(Variables);
             Show();
         }
 
@@ -91,13 +99,9 @@ namespace StageProjectScripts.Forms
         {
             Hide();
             Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView();
-            DataExport.ClearTemp(Variables);
+            var dataExport = new DataExport();
+            dataExport.ClearTemp(Variables);
             Show();
-        }
-
-        private void SettingsButton_Click(object sender, RoutedEventArgs e)
-        {
-
         }
     }
 }

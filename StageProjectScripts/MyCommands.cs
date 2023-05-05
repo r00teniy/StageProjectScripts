@@ -12,16 +12,18 @@ namespace StageProjectScripts
         [CommandMethod("StageProjectScripts")]
         static public void StageProjectScripts()
         {
-            var variables = SettingsStorage.ReadSettingsFromXML();
-            variables.SavedData = SettingsStorage.ReadData();
+            var settingsStorage = new SettingsStorage();
+            var variables = settingsStorage.ReadSettingsFromXML();
+            variables.SavedData = settingsStorage.ReadData();
             var MW = new MainWindow(variables);
             MW.Show();
         }
         [CommandMethod("StageProjectChecks")]
         static public void StageProjectChecks()
         {
-            var variables = SettingsStorage.ReadSettingsFromXML();
-            variables.SavedData = SettingsStorage.ReadData();
+            var settingsStorage = new SettingsStorage();
+            var variables = settingsStorage.ReadSettingsFromXML();
+            variables.SavedData = settingsStorage.ReadData();
             var CW = new ChecksWindow(variables);
             CW.Show();
         }
