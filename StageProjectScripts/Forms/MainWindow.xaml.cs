@@ -20,17 +20,19 @@ namespace StageProjectScripts.Forms
         DataImport _dataImport;
         public Variables _variables;
 
-        public MainWindow(Variables variables)
+        public MainWindow()
         {
             InitializeComponent();
-            _variables = variables;
-            _dataImport = new DataImport();
             CalculateButton.IsEnabled = false;
             LabelPavement.IsEnabled = false;
             LabelGreenery.IsEnabled = false;
-            //Base xRef List
+            var settingsStorage = new SettingsStorage();
+            _variables = settingsStorage.ReadSettingsFromXML();
+            _variables.SavedData = settingsStorage.ReadData();
+            _dataImport = new DataImport();
             xRefs = new(_dataImport.GetXRefList());
             plotRef = new(_dataImport.GetXRefList());
+            //Base xRef List
             baseXRefComboBox.SetBinding(ItemsControl.ItemsSourceProperty, new Binding() { Source = xRefs });
             if (_variables.SavedData[0] != "" && xRefs.Where(x => x == _variables.SavedData[0]).ToList().Count != 0)
             {

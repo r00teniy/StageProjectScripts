@@ -130,6 +130,67 @@ internal class DataImport
         }
         return output;
     }
+    public List<T>[] GetAllElementsOfTypeOnLayers<T>(Transaction tr, string[] layers, string xrefName = null, bool everywhere = false) where T : Entity
+    {
+        List<T>[] output = new List<T>[layers.Length];
+        for (var i = 0; i < output.Length; i++)
+        {
+            output[i] = new List<T>();
+        }
+        var xrefList = new List<XrefGraphNode>();
+        var btrList = new List<BlockTableRecord>();
+        var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+        if (everywhere)
+        {
+            XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
+            for (int i = 1; i < XrGraph.NumNodes; i++)
+            {
+                xrefList.Add(XrGraph.GetXrefNode(i));
+            }
+            btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+        }
+        else if (xrefName != null)
+        {
+            XrefGraph XrGraph = db.GetHostDwgXrefGraph(false);
+            for (int i = 0; i < XrGraph.NumNodes; i++)
+            {
+                XrefGraphNode XrNode = XrGraph.GetXrefNode(i);
+                if (XrNode.Name == xrefName)
+                {
+                    xrefList.Add(XrNode);
+                    break;
+                }
+            }
+        }
+        else
+        {
+            btrList.Add((BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForRead));
+        }
+
+        foreach (var xref in xrefList)
+        {
+            btrList.Add((BlockTableRecord)tr.GetObject(xref.BlockTableRecordId, OpenMode.ForRead));
+        }
+        foreach (var btr in btrList)
+        {
+            foreach (var item in btr)
+            {
+                if (item.ObjectClass.IsDerivedFrom(RXObject.GetClass(typeof(T))))
+                {
+                    for (var i = 0; i < layers.Length; i++)
+                    {
+                        var entity = (T)tr.GetObject(item, OpenMode.ForRead);
+                        var layerToCHeck = xrefName != null ? xrefName + "|" + layers[i] : layers[i];
+                        if (entity.Layer == layerToCHeck)
+                        {
+                            output[i].Add(entity);
+                        }
+                    }
+                }
+            }
+        }
+        return output;
+    }
     //Getting block insertion points, including arrays
     public List<Point3d> GetBlocksPosition(Transaction tr, string layerName, string xrefName = null, bool everywhere = false)
     {

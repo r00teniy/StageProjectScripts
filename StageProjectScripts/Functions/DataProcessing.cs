@@ -79,7 +79,6 @@ namespace StageProjectScripts.Functions
             {
                 try
                 {
-                    // can't instersec hatches, get polyline and intersect them or just get curves for each loop and intersect them??
                     Plane plane = hatches[i].GetPlane();
                     Region region = null;
                     if (hatches[i].GetLoopAt(0).LoopType == HatchLoopTypes.External)
@@ -507,11 +506,7 @@ namespace StageProjectScripts.Functions
             try
             {
                 List<DataElementModel> hatchModelList = new();
-                List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
-                for (var i = 0; i < variables.LaylistHatch.Length; i++)
-                {
-                    hatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i], xRef);
-                }
+                List<Hatch>[] hatches = _dataImport.GetAllElementsOfTypeOnLayers<Hatch>(tr, variables.LaylistHatch, xRef);
                 for (var i = 0; i < variables.LaylistHatch.Length; i++)
                 {
                     var hatchAreas = GetHatchArea(tr, hatches[i]);
@@ -535,11 +530,7 @@ namespace StageProjectScripts.Functions
             {
                 //Counting blocks with parameters
                 List<DataElementModel> paramBlocksModelList = new();
-                List<BlockReference>[] blocksWithParams = new List<BlockReference>[variables.LaylistBlockWithParams.Length];
-                for (var i = 0; i < variables.LaylistBlockWithParams.Length; i++)
-                {
-                    blocksWithParams[i] = _dataImport.GetAllElementsOfTypeOnLayer<BlockReference>(tr, variables.LaylistBlockWithParams[i]);
-                }
+                List<BlockReference>[] blocksWithParams = _dataImport.GetAllElementsOfTypeOnLayers<BlockReference>(tr, variables.LaylistBlockWithParams);
                 var paramTableRow = 0;
                 for (var i = 0; i < variables.LaylistBlockWithParams.Length; i++)
                 {
@@ -582,20 +573,13 @@ namespace StageProjectScripts.Functions
                 //Counting blocks including those in arrays
                 List<DataElementModel> normalBlocksModelList = new();
 
-                List<List<Point3d>> blockPositions = new();
-                List<List<bool>> areBlocksInside = new();
                 for (int i = 0; i < variables.LaylistBlockCount.Length; i++)
                 {
-                    blockPositions.Add(new List<Point3d>());
-                    blockPositions[i] = _dataImport.GetBlocksPosition(tr, variables.LaylistBlockCount[i]);
-                    areBlocksInside.Add(new List<bool>());
-                    areBlocksInside[i] = AreObjectsInsidePlot(plotBorder, blockPositions[i]);
-                }
-                //Creating table data
-                for (var i = 0; i < variables.LaylistBlockCount.Length; i++)
-                {
-                    normalBlocksModelList.Add(new DataElementModel(areBlocksInside[i].Where(x => x == true).Count(), i, true));
-                    normalBlocksModelList.Add(new DataElementModel(areBlocksInside[i].Where(x => x == false).Count(), i, false));
+                    var blockPositions = _dataImport.GetBlocksPosition(tr, variables.LaylistBlockCount[i]);
+                    var areBlocksInside = AreObjectsInsidePlot(plotBorder, blockPositions);
+                    //Creating table data
+                    normalBlocksModelList.Add(new DataElementModel(areBlocksInside.Where(x => x == true).Count(), i, true));
+                    normalBlocksModelList.Add(new DataElementModel(areBlocksInside.Where(x => x == false).Count(), i, false));
                 }
                 //Filling Normal blocks table
                 _dataExport.FillTableWithData(tr, normalBlocksModelList, variables.Tbn, variables.LaylistBlockCount.Length, "0");
@@ -610,12 +594,8 @@ namespace StageProjectScripts.Functions
             try
             {
                 List<DataElementModel> plineAreaModelList = new();
-                List<Polyline>[] polylinesForAreas = new List<Polyline>[variables.LaylistPlA.Length];
-                for (var i = 0; i < variables.LaylistPlA.Length; i++)
-                {
-                    polylinesForAreas[i] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[i], xRef);
-                }
-                //Creating regions
+                List<Polyline>[] polylinesForAreas = _dataImport.GetAllElementsOfTypeOnLayers<Polyline>(tr, variables.LaylistPlA, xRef);
+                //Creating regions for GPZU
                 var workingRegions = CreateRegionsWithHoleSupport(polylinesForAreas[0]);
                 //Work with regions to determine what is outside GPZU
                 var gpzuRegion = RegionFromClosedCurve(plotBorder);
@@ -656,11 +636,8 @@ namespace StageProjectScripts.Functions
             try
             {
                 List<DataElementModel> plineLengthModelList = new();
-                List<Polyline>[] polylinesForLines = new List<Polyline>[variables.LaylistPlL.Length];
-                for (var i = 0; i < variables.LaylistPlL.Length; i++)
-                {
-                    polylinesForLines[i] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlL[i], xRef);
-                }
+                List<Polyline>[] polylinesForLines = _dataImport.GetAllElementsOfTypeOnLayers<Polyline>(tr, variables.LaylistPlL, xRef);
+
                 for (var i = 0; i < variables.LaylistPlL.Length; i++)
                 {
                     var plineLengths = polylinesForLines[i].Select(x => x.Length / variables.CurbLineCount[i]).ToList();
@@ -707,14 +684,7 @@ namespace StageProjectScripts.Functions
                     var numberOfPlinesInside = isInsideAnother[i].Where(x => x == true).ToList().Count;
                     if (numberOfPlinesInside == 0)
                     {
-                        var isRegionInsideAnother = false;
-                        for (int j = 0; j < isInsideAnother.Count; j++)
-                        {
-                            if (isInsideAnother[j][i])
-                            {
-                                isRegionInsideAnother = true;
-                            }
-                        }
+                        var isRegionInsideAnother = isInsideAnother.Where(x => x[i]).Select(x => x[i]).ToList().Count > 0;
                         if (!isRegionInsideAnother)
                         {
                             baseRegions[i] = CreateRegionFromPolyline(polylines[i]);
@@ -741,7 +711,6 @@ namespace StageProjectScripts.Functions
                         }
                         workingRegions.Add(baseRegions[i]);
                     }
-
                 }
             }
             return workingRegions;

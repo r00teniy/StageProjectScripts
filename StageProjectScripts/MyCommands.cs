@@ -12,10 +12,7 @@ namespace StageProjectScripts
         [CommandMethod("StageProjectScripts")]
         static public void StageProjectScripts()
         {
-            var settingsStorage = new SettingsStorage();
-            var variables = settingsStorage.ReadSettingsFromXML();
-            variables.SavedData = settingsStorage.ReadData();
-            var MW = new MainWindow(variables);
+            var MW = new MainWindow();
             MW.Show();
         }
         [CommandMethod("StageProjectChecks")]

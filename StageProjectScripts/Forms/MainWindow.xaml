@@ -4,9 +4,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:StageProjectScripts.Forms"
+        xmlns:vm="clr-namespace:StageProjectScripts.Models"
         mc:Ignorable="d"
         Title="Работа со стадией П" FontSize="18" Height="300" Width="600" Topmost="True" WindowStartupLocation="CenterScreen">
-    <Grid>
+    <Window.Resources>
+        <vm:MainWindowViewModel x:Key="vm"/>
+    </Window.Resources>
+    <Grid DataContext="{StaticResource vm}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
@@ -36,6 +40,7 @@
                HorizontalAlignment="Right"
                Grid.Row="1"/>
         <ComboBox x:Name="baseXRefComboBox"
+                  ItemsSource="{Binding Path=BaseXrefs}"
                   Grid.Row="1"
                   Grid.Column="1"
                   Margin="10,5,10,5" 
@@ -46,6 +51,7 @@
                HorizontalAlignment="Right"
                Grid.Row="2"/>
         <ComboBox x:Name="plotsXRefComboBox"
+                  ItemsSource="{Binding Path=PlotsXrefs}"
                   SelectionChanged="plotsXRefComboBox_SelectionChanged"
                   Grid.Row="2"
                   Grid.Column="1"
@@ -57,6 +63,7 @@
                Margin="24,0,0,0"
                Grid.Row="3"/>
         <ComboBox x:Name="plotsComboBox"
+                  ItemsSource="{Binding Path=Plots}"
                   Grid.Row="3"
                   Grid.Column="1"
                   Margin="10,5,10,5" SelectionChanged="plotsComboBox_SelectionChanged"/>
