@@ -6,11 +6,9 @@
         xmlns:local="clr-namespace:StageProjectScripts.Forms"
         xmlns:vm="clr-namespace:StageProjectScripts.Models"
         mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel}"
         Title="Работа со стадией П" FontSize="18" Height="300" Width="600" Topmost="True" WindowStartupLocation="CenterScreen">
-    <Window.Resources>
-        <vm:MainWindowViewModel x:Key="vm"/>
-    </Window.Resources>
-    <Grid DataContext="{StaticResource vm}">
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="*"/>
@@ -24,11 +22,11 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <!-- Row 0-->
-        <Button x:Name="SettingsButton"
+        <Button Command="{Binding SettingsButtonClickCommand}"
                 Grid.Row="0"
                 Content="Настройки"
                 Margin="10,5,10,5" 
-                Click="SettingsButton_Click"/>
+                />
         <Label Content="Данные для работы скриптов:"
                VerticalAlignment="Center"
                HorizontalAlignment="Center"
@@ -39,20 +37,19 @@
                VerticalAlignment="Center"
                HorizontalAlignment="Right"
                Grid.Row="1"/>
-        <ComboBox x:Name="baseXRefComboBox"
-                  ItemsSource="{Binding Path=BaseXrefs}"
+        <ComboBox ItemsSource="{Binding BaseXrefs, Mode=TwoWay}"
+                  SelectedIndex="{Binding SelectedBaseXref, Mode=TwoWay}"
                   Grid.Row="1"
                   Grid.Column="1"
                   Margin="10,5,10,5" 
-                  SelectionChanged="baseXRefComboBox_SelectionChanged"/>
+                  />
         <!-- Row 2-->
         <Label Content="Выберите файл границ: "
                VerticalAlignment="Center"
                HorizontalAlignment="Right"
                Grid.Row="2"/>
-        <ComboBox x:Name="plotsXRefComboBox"
-                  ItemsSource="{Binding Path=PlotsXrefs}"
-                  SelectionChanged="plotsXRefComboBox_SelectionChanged"
+        <ComboBox ItemsSource="{Binding PlotsXrefs, Mode=TwoWay}"
+                  SelectedIndex="{Binding SelectedPlotsXref, Mode=TwoWay}"
                   Grid.Row="2"
                   Grid.Column="1"
                   Margin="10,5,10,5"/>
@@ -62,35 +59,35 @@
                HorizontalAlignment="Right"
                Margin="24,0,0,0"
                Grid.Row="3"/>
-        <ComboBox x:Name="plotsComboBox"
-                  ItemsSource="{Binding Path=Plots}"
+        <ComboBox ItemsSource="{Binding Path=Plots, Mode=TwoWay}"
+                  SelectedIndex="{Binding SelectedPlot, Mode=TwoWay}"
                   Grid.Row="3"
                   Grid.Column="1"
-                  Margin="10,5,10,5" SelectionChanged="plotsComboBox_SelectionChanged"/>
+                  Margin="10,5,10,5"
+                  />
         <!-- Row 4-->
-        <Button x:Name="CalculateButton"
-                Click="CalculateButton_Click"
+        <Button Command="{Binding CalculateButtonClickCommand}"
                 Content="Рассчитать объёмы"
                 Grid.Row="4"
                 Grid.Column="1"
                 Margin="10,5,10,5" 
                 Grid.ColumnSpan="2"/>
-        <Button x:Name="LabelPavement"
+        <Button Command="{Binding LabelPavementsButtonClickCommand}"
                 Grid.Row="4"
                 Content="Подписать покрытия"
                 Margin="10,5,10,5"
-                Click="LabelPavement_Click"/>
+                />
         <!-- Row 5-->
-        <Button x:Name="LabelGreenery"
+        <Button Command="{Binding LabelGreeneryButtonClickCommand}"
                 Content="Подписать озеленение"
                 Grid.Row="5"
                 Margin="10,5,10,5" 
-                Click="LabelGreenery_Click"/>
-        <Button x:Name="CloseButton"
+                />
+        <Button Click="CloseButton_Click"
                 Content="Закрыть"
                 Grid.Row="5"
                 Grid.Column="1"
                 Margin="10,5,10,5" 
-                Click="CloseButton_Click"/>
+                />
     </Grid>
 </Window>
