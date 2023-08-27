@@ -10,7 +10,6 @@ namespace StageProjectScripts.Forms;
 /// </summary>
 public partial class SettingsWindow : Window
 {
-    private TextBox[] pavementLabelBoxList;
     private TextBox[] curbsNumberOfLinesBoxList;
     private TextBox[] greeneryLabelBoxList;
     private TextBox[] greeneryGroupingDistanceBoxList;
@@ -20,14 +19,9 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         _variables = variables;
         this.DataContext = variables;
-        pavementLabelBoxList = new TextBox[] { Pave0Box, Pave1Box, Pave2Box, Pave3Box, Pave4Box, Pave5Box, Pave6Box, Pave7Box, Pave8Box, Pave9Box };
         curbsNumberOfLinesBoxList = new TextBox[] { Curb0Box, Curb1Box, Curb2Box, Curb3Box, null, null, Curb6Box, Curb7Box, Curb8Box, Curb9Box };
         greeneryLabelBoxList = new TextBox[] { GreeneryLabel0Box, GreeneryLabel1Box };
         greeneryGroupingDistanceBoxList = new TextBox[] { GreeneryRange0Box, GreeneryRange1Box };
-        for (var i = 0; i < pavementLabelBoxList.Length; i++)
-        {
-            pavementLabelBoxList[i].Text = variables.PLabelValues[i];
-        }
         for (var i = 0; i < curbsNumberOfLinesBoxList.Length; i++)
         {
             if (curbsNumberOfLinesBoxList[i] != null)
@@ -54,10 +48,6 @@ public partial class SettingsWindow : Window
     {
         try
         {
-            for (var i = 0; i < pavementLabelBoxList.Length; i++)
-            {
-                _variables.PLabelValues[i] = pavementLabelBoxList[i].Text;
-            }
             for (var i = 0; i < curbsNumberOfLinesBoxList.Length; i++)
             {
                 if (curbsNumberOfLinesBoxList[i] != null)

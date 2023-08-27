@@ -45,6 +45,9 @@ public partial class MainWindowViewModel : ObservableObject
         _dataImport = new DataImport();
         _variables = _settingsStorage.ReadSettingsFromXML();
         _variables.SavedData = _settingsStorage.ReadData();
+        _selectedPlotsXref = -1;
+        _selectedBaseXref = -1;
+        _selectedPlot = -1;
         //Base xRef List
         BaseXrefs = new(_dataImport.GetXRefList());
         if (_variables.SavedData[0] != null && BaseXrefs.Where(x => x == _variables.SavedData[0]).ToList().Count != 0)
@@ -60,9 +63,9 @@ public partial class MainWindowViewModel : ObservableObject
         }
         //Plots
 
-        if (_variables.SavedData[2] != null && Plots.Where(x => x == _variables.SavedData[2]).ToList().Count != 0)
+        if (_variables.SavedData[2] != null && Plots != null && Plots.Where(x => x == _variables.SavedData[2]).ToList().Count != 0)
         {
-            SelectedPlotsXref = Plots.IndexOf(_variables.SavedData[2]);
+            SelectedPlot = Plots.IndexOf(_variables.SavedData[2]);
         }
     }
     [RelayCommand(CanExecute = nameof(CanCalculateButtonClick))]
