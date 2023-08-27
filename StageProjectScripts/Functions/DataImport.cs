@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-using Autodesk.AutoCAD.ApplicationServices;
+﻿using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.BoundaryRepresentation;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
-
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 
 namespace StageProjectScripts.Functions;
@@ -386,18 +384,5 @@ internal class DataImport
             }
         }
         return result;
-    }
-    internal Polyline GetPlotBorder(string plotLayer, Transaction tr, string plotXref, string plotNumber)
-    {
-        var plotBorders = GetAllElementsOfTypeOnLayer<Polyline>(tr, plotLayer + plotNumber.Replace(':', '_'), plotXref);
-        if (plotBorders.Count != 1)
-        {
-            System.Windows.MessageBox.Show("На слое участка ГПЗУ должна быть ровно одна полилиния", "Error", System.Windows.MessageBoxButton.OK);
-            return null;
-        }
-        else
-        {
-            return plotBorders[0];
-        }
     }
 }

@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-
-using Autodesk.AutoCAD.ApplicationServices;
+﻿using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.BoundaryRepresentation;
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
-
 using StageProjectScripts.Models;
-
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 
 namespace StageProjectScripts.Functions
@@ -71,7 +68,7 @@ namespace StageProjectScripts.Functions
             }
         }
         //Creating regions from hatches
-        internal List<Region> CreateRegionsFromHatches(List<Hatch> hatches, out int regionErrors)
+        private List<Region> CreateRegionsFromHatches(List<Hatch> hatches, out int regionErrors)
         {
             regionErrors = 0;
             List<Region> regions = new();
@@ -147,7 +144,7 @@ namespace StageProjectScripts.Functions
             return regions;
         }
         //Create region from hatch
-        internal Region CreateRegionFromHatchLoop(HatchLoop loop, Plane plane)
+        private Region CreateRegionFromHatchLoop(HatchLoop loop, Plane plane)
         {
             DBObjectCollection loopColl = new();
             var pl = GetBorderFromHatchLoop(loop, plane);
@@ -157,7 +154,7 @@ namespace StageProjectScripts.Functions
             return region;
         }
         //function to check for intersections between regions
-        internal List<ObjectId> CheckForRegionIntersections(Transaction tr, BlockTableRecord btr, Variables variables, List<Region> regions)
+        private List<ObjectId> CheckForRegionIntersections(Transaction tr, BlockTableRecord btr, Variables variables, List<Region> regions)
         {
             List<ObjectId> intersections = new();
             for (var i = 0; i < regions.Count - 1; i++)
@@ -186,7 +183,7 @@ namespace StageProjectScripts.Functions
             return intersections;
         }
         //Function finding intersection region of 2 polylines
-        public Region CreateRegionFromPolyline(Polyline pl)
+        private Region CreateRegionFromPolyline(Polyline pl)
         {
             DBObjectCollection c1 = new()
             {
@@ -203,7 +200,7 @@ namespace StageProjectScripts.Functions
                 return null;
             }
         }
-        internal void CheckForHatchesWithBorderRestorationErrors(Variables variables)
+        public void CheckForHatchesWithBorderRestorationErrors(Variables variables)
         {
             List<ObjectId> errorHatches = new();
             using (DocumentLock acLckDoc = doc.LockDocument())
@@ -246,7 +243,7 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
-        internal void CheckHatchesForSelfIntersections(Variables variables)
+        public void CheckHatchesForSelfIntersections(Variables variables)
         {
             List<ObjectId> errorHatches = new();
             using (DocumentLock acLckDoc = doc.LockDocument())
@@ -279,18 +276,19 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
-        internal void CheckForBorderIntersections(Variables variables, string plotXref, string plotNumber)
+        public void CheckForBorderIntersections(Variables variables, string plotXref, string plotNumber)
         {
             List<Point3d> errorPoints = new();
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    Polyline plotBorder = _dataImport.GetPlotBorder(variables.PlotLayer, tr, plotXref, plotNumber);
-                    if (plotBorder == null)
+                    var plotBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.PlotLayer + plotNumber.Replace(':', '_'), plotXref);
+                    if (plotBorders.Count == 0)
                     {
                         return;
                     }
+                    var plotRegions = CreateRegionsWithHoleSupport(plotBorders);
                     List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
                     for (var i = 0; i < variables.LaylistHatch.Length; i++)
                     {
@@ -301,7 +299,7 @@ namespace StageProjectScripts.Functions
                     {
                         foreach (var hat in hatches[i])
                         {
-                            if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Hatch>(hat), plotBorder) is var res && res != null)
+                            if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Hatch>(hat), plotRegions) is var res && res != null)
                             {
                                 errorPoints.Add((Point3d)res);
                             }
@@ -321,7 +319,7 @@ namespace StageProjectScripts.Functions
                     {
                         foreach (var pl in polylinesForLines[i])
                         {
-                            if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Polyline>(pl), plotBorder) is var res && res != null)
+                            if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Polyline>(pl), plotRegions) is var res && res != null)
                             {
                                 errorPoints.Add((Point3d)res);
                             }
@@ -341,7 +339,7 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
-        internal void LabelPavements(Variables variables, string xRef)
+        public void LabelPavements(Variables variables, string xRef)
         {
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
@@ -372,7 +370,7 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
-        internal void LabelGreenery(Variables variables)
+        public void LabelGreenery(Variables variables)
         {
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
@@ -389,7 +387,7 @@ namespace StageProjectScripts.Functions
             }
         }
         //Function to group elements based on distance between 2 of them
-        public List<List<Point3d>> GroupBlocksByDistance(List<Point3d> Points, double Distance)
+        private List<List<Point3d>> GroupBlocksByDistance(List<Point3d> Points, double Distance)
         {
             // Calclulate distance between points
             List<List<double>> Dist = new();
@@ -475,33 +473,34 @@ namespace StageProjectScripts.Functions
             }
             return GroupPoints;
         }
-        internal void CalculateVolumes(Variables variables, string xRef, string plotXref, string plotNumber)
+        public void CalculateVolumes(Variables variables, string xRef, string plotXref, string plotNumber)
         {
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    Polyline plotBorder = _dataImport.GetPlotBorder(variables.PlotLayer, tr, plotXref, plotNumber);
-                    if (plotBorder == null)
+                    var plotBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.PlotLayer + plotNumber.Replace(':', '_'), plotXref);
+                    if (plotBorders.Count == 0)
                     {
                         return;
                     }
+                    var plotRegions = CreateRegionsWithHoleSupport(plotBorders);
 
-                    CalculateAndFillHatchTable(variables, tr, xRef, plotBorder);
+                    CalculateAndFillHatchTable(variables, tr, xRef, plotRegions);
 
-                    CalculateAndFillPolylineLengthTable(variables, tr, xRef, plotBorder);
+                    CalculateAndFillPolylineLengthTable(variables, tr, xRef, plotRegions);
 
-                    CalculateAndFillPolylineAreaTable(variables, tr, xRef, plotBorder);
+                    CalculateAndFillPolylineAreaTable(variables, tr, xRef, plotRegions);
 
-                    CalculateAndFillNormalBlocksTable(variables, tr, xRef, plotBorder);
+                    CalculateAndFillNormalBlocksTable(variables, tr, plotRegions);
 
-                    CalculateAndFillParamBlocksTable(variables, tr, xRef, plotBorder);
+                    CalculateAndFillParamBlocksTable(variables, tr, plotRegions);
 
                     tr.Commit();
                 }
             }
         }
-        private void CalculateAndFillHatchTable(Variables variables, Transaction tr, string xRef, Polyline plotBorder)
+        private void CalculateAndFillHatchTable(Variables variables, Transaction tr, string xRef, List<Region> plotRegions)
         {
             //Getting data for Hatch table
             try
@@ -515,7 +514,7 @@ namespace StageProjectScripts.Functions
                 for (var i = 0; i < variables.LaylistHatch.Length; i++)
                 {
                     var hatchAreas = GetHatchArea(tr, hatches[i]);
-                    var areHatchesInside = AreObjectsInsidePlot<Hatch>(plotBorder, hatches[i]);
+                    var areHatchesInside = AreObjectsInsidePlot(plotRegions, hatches[i]);
                     for (var j = 0; j < hatches[i].Count; j++)
                     {
                         hatchModelList.Add(new DataElementModel(hatchAreas[j], i, areHatchesInside[j]));
@@ -529,7 +528,7 @@ namespace StageProjectScripts.Functions
                 System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
             }
         }
-        private void CalculateAndFillParamBlocksTable(Variables variables, Transaction tr, string xRef, Polyline plotBorder)
+        private void CalculateAndFillParamBlocksTable(Variables variables, Transaction tr, List<Region> plotRegions)
         {
             try
             {
@@ -543,7 +542,7 @@ namespace StageProjectScripts.Functions
                 var paramTableRow = 0;
                 for (var i = 0; i < variables.LaylistBlockWithParams.Length; i++)
                 {
-                    var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotBorder, blocksWithParams[i]);
+                    var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotRegions, blocksWithParams[i]);
                     for (int j = 0; j < blocksWithParams[i].Count; j++)
                     {
                         var br = blocksWithParams[i][j];
@@ -575,7 +574,7 @@ namespace StageProjectScripts.Functions
                 System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
             }
         }
-        private void CalculateAndFillNormalBlocksTable(Variables variables, Transaction tr, string xRef, Polyline plotBorder)
+        private void CalculateAndFillNormalBlocksTable(Variables variables, Transaction tr, List<Region> plotRegions)
         {
             try
             {
@@ -589,7 +588,7 @@ namespace StageProjectScripts.Functions
                     blockPositions.Add(new List<Point3d>());
                     blockPositions[i] = _dataImport.GetBlocksPosition(tr, variables.LaylistBlockCount[i]);
                     areBlocksInside.Add(new List<bool>());
-                    areBlocksInside[i] = AreObjectsInsidePlot(plotBorder, blockPositions[i]);
+                    areBlocksInside[i] = AreObjectsInsidePlot(plotRegions, blockPositions[i]);
                 }
                 //Creating table data
                 for (var i = 0; i < variables.LaylistBlockCount.Length; i++)
@@ -605,7 +604,7 @@ namespace StageProjectScripts.Functions
                 System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
             }
         }
-        private void CalculateAndFillPolylineAreaTable(Variables variables, Transaction tr, string xRef, Polyline plotBorder)
+        private void CalculateAndFillPolylineAreaTable(Variables variables, Transaction tr, string xRef, List<Region> plotRegions)
         {
             try
             {
@@ -618,13 +617,15 @@ namespace StageProjectScripts.Functions
                 //Creating regions
                 var workingRegions = CreateRegionsWithHoleSupport(polylinesForAreas[0]);
                 //Work with regions to determine what is outside GPZU
-                var gpzuRegion = RegionFromClosedCurve(plotBorder);
                 double areaOutside = 0;
                 double areaInside = 0;
                 foreach (var workReg in workingRegions)
                 {
                     areaInside += workReg.Area;
-                    workReg.BooleanOperation(BooleanOperationType.BoolSubtract, gpzuRegion);
+                    foreach (var item in plotRegions)
+                    {
+                        workReg.BooleanOperation(BooleanOperationType.BoolSubtract, item);
+                    }
                     areaOutside += workReg.Area;
                 }
                 areaInside -= areaOutside;
@@ -634,7 +635,7 @@ namespace StageProjectScripts.Functions
 
                 for (int i = 1; i < variables.LaylistPlA.Length; i++)
                 {
-                    var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotBorder, polylinesForAreas[i]);
+                    var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotRegions, polylinesForAreas[i]);
                     for (int j = 0; j < polylinesForAreas[i].Count; j++)
                     {
                         object pl = polylinesForAreas[i][j];
@@ -651,7 +652,7 @@ namespace StageProjectScripts.Functions
             }
         }
 
-        internal void CalculateAndFillPolylineLengthTable(Variables variables, Transaction tr, string xRef, Polyline plotBorder)
+        private void CalculateAndFillPolylineLengthTable(Variables variables, Transaction tr, string xRef, List<Region> plotRegions)
         {
             try
             {
@@ -664,7 +665,7 @@ namespace StageProjectScripts.Functions
                 for (var i = 0; i < variables.LaylistPlL.Length; i++)
                 {
                     var plineLengths = polylinesForLines[i].Select(x => x.Length / variables.CurbLineCount[i]).ToList();
-                    var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotBorder, polylinesForLines[i]);
+                    var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotRegions, polylinesForLines[i]);
                     for (var j = 0; j < polylinesForLines[i].Count; j++)
                     {
                         plineLengthModelList.Add(new DataElementModel(plineLengths[j], i, arePlinesInside[j]));
@@ -679,7 +680,7 @@ namespace StageProjectScripts.Functions
             }
         }
         //creating regions from polylines with hole support
-        public List<Region> CreateRegionsWithHoleSupport(List<Polyline> polylines)
+        private List<Region> CreateRegionsWithHoleSupport(List<Polyline> polylines)
         {
             List<Region> workingRegions = new();
             if (polylines.Count == 1)
@@ -701,7 +702,11 @@ namespace StageProjectScripts.Functions
                     isInsideAnother[i][i] = false;
                 }
                 Region[] baseRegions = new Region[isInsideAnother.Count];
-                Region[] regionToSubstract = new Region[isInsideAnother.Count];
+                List<List<Region>> regionToSubstract = new();
+                for (int i = 0; i < isInsideAnother.Count; i++)
+                {
+                    regionToSubstract.Add(new());
+                }
                 for (int i = 0; i < isInsideAnother.Count; i++)
                 {
                     var numberOfPlinesInside = isInsideAnother[i].Where(x => x == true).ToList().Count;
@@ -720,24 +725,28 @@ namespace StageProjectScripts.Functions
                             baseRegions[i] = CreateRegionFromPolyline(polylines[i]);
                         }
                     }
-                    else if (numberOfPlinesInside == 1)
-                    {
-                        baseRegions[i] = CreateRegionFromPolyline(polylines[i]);
-                        var insideBitIndex = isInsideAnother[i].IndexOf(true);
-                        regionToSubstract[i] = CreateRegionFromPolyline(polylines[insideBitIndex]);
-                    }
                     else
                     {
-                        System.Windows.MessageBox.Show("Островок внутри отверстия не поддерживается для границ участка. Если эта ошибка появилась в другом случае, обратитесь к разработчику", "Error", System.Windows.MessageBoxButton.OK);
+                        baseRegions[i] = CreateRegionFromPolyline(polylines[i]);
+                        for (var j = 0; j < isInsideAnother[i].Count; j++)
+                        {
+                            if (isInsideAnother[i][j])
+                            {
+                                regionToSubstract[i].Add(CreateRegionFromPolyline(polylines[j]));
+                            }
+                        }
                     }
                 }
                 for (int i = 0; i < baseRegions.Length; i++)
                 {
                     if (baseRegions[i] != null)
                     {
-                        if (regionToSubstract[i] != null)
+                        if (regionToSubstract[i].Count != 0)
                         {
-                            baseRegions[i].BooleanOperation(BooleanOperationType.BoolSubtract, regionToSubstract[i]);
+                            foreach (var item in regionToSubstract[i])
+                            {
+                                baseRegions[i].BooleanOperation(BooleanOperationType.BoolSubtract, item);
+                            }
                         }
                         workingRegions.Add(baseRegions[i]);
                     }
@@ -747,7 +756,7 @@ namespace StageProjectScripts.Functions
             return workingRegions;
         }
         //Point Containment for checking out if point is inside plot or outside it
-        public Region RegionFromClosedCurve(Curve curve)
+        private Region RegionFromClosedCurve(Curve curve)
         {
             if (!curve.Closed)
                 throw new ArgumentException("Curve must be closed.");
@@ -764,7 +773,7 @@ namespace StageProjectScripts.Functions
                 return regions.Cast<Region>().First();
             }
         }
-        public PointContainment GetPointContainment(Curve curve, Point3d point)
+        private PointContainment GetPointContainment(Curve curve, Point3d point)
         {
             if (!curve.Closed)
                 throw new ArgumentException("Полилиния границы должна быть замкнута");
@@ -774,7 +783,7 @@ namespace StageProjectScripts.Functions
             using (region)
             { return GetPointContainment(region, point); }
         }
-        public PointContainment GetPointContainment(Region region, Point3d point)
+        private PointContainment GetPointContainment(Region region, Point3d point)
         {
             PointContainment result = PointContainment.Outside;
             using (Brep brep = new(region))
@@ -789,9 +798,30 @@ namespace StageProjectScripts.Functions
                 }
             }
             return result;
+
+        }
+        private PointContainment GetPointContainment(List<Region> regions, Point3d point)
+        {
+            var result = PointContainment.Outside;
+            foreach (var region in regions)
+            {
+                var tempResult = PointContainment.Outside;
+                using (Brep brep = new(region))
+                {
+                    if (brep != null)
+                    {
+                        using (BrepEntity ent = brep.GetPointContainment(point, out tempResult))
+                        {
+                            if (ent is AcBr.Face)
+                                result = PointContainment.Inside;
+                        }
+                    }
+                }
+            }
+            return result;
         }
         //Getting hatch border or polyline points to check if it is inside plot or not
-        public List<Point3d> GetPointsFromObject<T>(T obj)
+        private List<Point3d> GetPointsFromObject<T>(T obj)
         {
             List<Point3d> output = new();
             if (obj is Hatch hat)
@@ -821,12 +851,12 @@ namespace StageProjectScripts.Functions
             throw new System.Exception("This method works with BlockReference, Polyline or Hatch only.");
         }
         //Checking if group of points is inside/on the polyline
-        public bool ArePointsInsidePolyline(List<Point3d> points, Polyline pl)
+        private bool ArePointsInsidePolyline(List<Point3d> points, List<Region> regions)
         {
-            var isFirstPointIn = GetPointContainment(pl, points[0]);
+            var isFirstPointIn = GetPointContainment(regions, points[0]);
             for (int i = 1; i < points.Count; i++)
             {
-                var isThisPointIn = GetPointContainment(pl, points[i]);
+                var isThisPointIn = GetPointContainment(regions, points[i]);
                 if (isThisPointIn != isFirstPointIn)
                 {
                     if (isFirstPointIn == PointContainment.OnBoundary)
@@ -842,12 +872,12 @@ namespace StageProjectScripts.Functions
             return isFirstPointIn == PointContainment.Inside;
         }
         //Getting points that are on other side of plotBorder
-        public Point3d? ArePointsOnBothSidesOfBorder(List<Point3d> points, Polyline pl)
+        private Point3d? ArePointsOnBothSidesOfBorder(List<Point3d> points, List<Region> regions)
         {
-            var isFirstPointIn = GetPointContainment(pl, points[0]);
+            var isFirstPointIn = GetPointContainment(regions, points[0]);
             for (int i = 1; i < points.Count; i++)
             {
-                var isThisPointIn = GetPointContainment(pl, points[i]);
+                var isThisPointIn = GetPointContainment(regions, points[i]);
                 if (isThisPointIn != isFirstPointIn)
                 {
                     if (isFirstPointIn == PointContainment.OnBoundary)
@@ -863,7 +893,7 @@ namespace StageProjectScripts.Functions
             return null;
         }
         //Function to check if hatch/polyline/blockreference is inside plot (can have 2+ borders)
-        public List<bool> AreObjectsInsidePlot<T>(Polyline plotBorder, List<T> objects)
+        private List<bool> AreObjectsInsidePlot<T>(List<Region> plotRegions, List<T> objects)
         {
             if (objects == null)
             {
@@ -875,14 +905,44 @@ namespace StageProjectScripts.Functions
                 var tempResult = false;
                 if (item is Point3d point)
                 {
-                    if (ArePointsInsidePolyline(new List<Point3d>() { point }, plotBorder))
+                    if (ArePointsInsidePolyline(new List<Point3d>() { point }, plotRegions))
                     {
                         tempResult = true;
                     }
                 }
                 else
                 {
-                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotBorder))
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions))
+                    {
+                        tempResult = true;
+                    }
+                }
+                results.Add(tempResult);
+            }
+            return results;
+        }
+        private List<bool> AreObjectsInsidePlot<T>(Polyline plot, List<T> objects)
+        {
+            if (objects == null)
+            {
+                return null;
+            }
+            List<bool> results = new();
+            var plotRegions = new List<Region>();
+            plotRegions.Add(RegionFromClosedCurve(plot));
+            foreach (var item in objects)
+            {
+                var tempResult = false;
+                if (item is Point3d point)
+                {
+                    if (ArePointsInsidePolyline(new List<Point3d>() { point }, plotRegions))
+                    {
+                        tempResult = true;
+                    }
+                }
+                else
+                {
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions))
                     {
                         tempResult = true;
                     }
@@ -892,7 +952,7 @@ namespace StageProjectScripts.Functions
             return results;
         }
         //Function that returns Polyline from HatchLoop
-        public Polyline GetBorderFromHatchLoop(HatchLoop loop, Plane plane)
+        private Polyline GetBorderFromHatchLoop(HatchLoop loop, Plane plane)
         {
             //Modified code from Rivilis Restore Hatch Boundary program
             Polyline looparea = new();
@@ -1031,7 +1091,7 @@ namespace StageProjectScripts.Functions
             return looparea;
         }
         //Function to get areas for a list on hatches.
-        public List<double> GetHatchArea(Transaction tr, List<Hatch> hatchList)
+        private List<double> GetHatchArea(Transaction tr, List<Hatch> hatchList)
         {
             List<double> hatchAreaList = new();
             var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);

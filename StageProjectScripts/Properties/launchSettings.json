@@ -1,8 +1,12 @@
 {
   "profiles": {
-    "Autocad": {
+    "Autocad 2021": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\Autodesk\\AutoCAD 2021\\acad.exe"
+    },
+    "Autocad 2022": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Autodesk\\AutoCAD 2022\\acad.exe"
     }
   }
 }
