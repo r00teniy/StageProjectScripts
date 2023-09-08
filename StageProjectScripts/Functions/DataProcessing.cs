@@ -1,14 +1,17 @@
-﻿using Autodesk.AutoCAD.ApplicationServices;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+
+using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.BoundaryRepresentation;
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
+
 using StageProjectScripts.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+
 using AcBr = Autodesk.AutoCAD.BoundaryRepresentation;
 
 namespace StageProjectScripts.Functions
@@ -47,7 +50,19 @@ namespace StageProjectScripts.Functions
                     var regions = CreateRegionsFromHatches(hatches, out int regionErrors);
 
                     //Checking for region intersections
-                    var intersections = CheckForRegionIntersections(tr, btr, variables, regions);
+                    List<ObjectId> intersections = new(); ;
+                    try
+                    {
+                        intersections = CheckForRegionIntersections(tr, btr, variables, regions);
+                    }
+                    catch (System.Exception e)
+                    {
+                        ObjectId[] errorsSelection = { hatches[Convert.ToInt32(e.Message.Split(',')[0])].ObjectId, hatches[Convert.ToInt32(e.Message.Split(',')[1])].ObjectId };
+                        ed.SetImpliedSelection(errorsSelection);
+                        ed.SelectImplied();
+                        System.Windows.MessageBox.Show($"Найдена пара штриховок, пересечение которых выдаёт ошибку, необходимо их проверить на самопересечения вручную или пересоздать", "Сообщение", System.Windows.MessageBoxButton.OK);
+                        return;
+                    }
                     //displaying results
                     if (regionErrors != 0)
                     {
@@ -161,23 +176,30 @@ namespace StageProjectScripts.Functions
             {
                 for (int j = i + 1; j < regions.Count; j++)
                 {
-                    var aReg = regions[i].Clone() as Region;
-                    var aReg2 = regions[j].Clone() as Region;
-                    aReg.BooleanOperation(BooleanOperationType.BoolIntersect, aReg2);
-                    if (aReg != null && aReg.Area >= 0.01)
+                    try
                     {
-                        // checking if temporary layer exist, if not - creating it.
-                        _dataExport.LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
-                        aReg.Layer = variables.TempLayer;
-                        btr.AppendEntity(aReg);
-                        tr.AddNewlyCreatedDBObject(aReg, true);
-                        intersections.Add(aReg.ObjectId);
+                        var aReg = regions[i].Clone() as Region;
+                        var aReg2 = regions[j].Clone() as Region;
+                        aReg.BooleanOperation(BooleanOperationType.BoolIntersect, aReg2);
+                        if (aReg != null && aReg.Area >= 0.01)
+                        {
+                            // checking if temporary layer exist, if not - creating it.
+                            _dataExport.LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
+                            aReg.Layer = variables.TempLayer;
+                            btr.AppendEntity(aReg);
+                            tr.AddNewlyCreatedDBObject(aReg, true);
+                            intersections.Add(aReg.ObjectId);
+                        }
+                        else
+                        {
+                            aReg.Dispose();
+                        }
+                        aReg2.Dispose();
                     }
-                    else
+                    catch
                     {
-                        aReg.Dispose();
+                        throw new System.Exception($"{i},{j}");
                     }
-                    aReg2.Dispose();
                 }
             }
             return intersections;
@@ -284,6 +306,15 @@ namespace StageProjectScripts.Functions
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
                     var plotBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.PlotLayer + plotNumber.Replace(':', '_'), plotXref);
+                    foreach (var item in plotBorders)
+                    {
+                        if (!item.Closed)
+                        {
+                            System.Windows.MessageBox.Show("Границы участка должны быть замкнутыми, проверьте что все полилиниии границы участка замкнуты в свойствах", "Сообщение", System.Windows.MessageBoxButton.OK);
+                            tr.Commit();
+                            return;
+                        }
+                    }
                     if (plotBorders.Count == 0)
                     {
                         return;
