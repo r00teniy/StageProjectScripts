@@ -533,32 +533,142 @@ namespace StageProjectScripts.Functions
         }
         private void CalculateAndFillHatchTable(Variables variables, Transaction tr, string xRef, List<Region> plotRegions)
         {
-            //Getting data for Hatch table
             try
             {
-                List<DataElementModel> hatchModelList = new();
-                List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
-                for (var i = 0; i < variables.LaylistHatch.Length; i++)
-                {
-                    hatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i], xRef);
-                }
-                for (var i = 0; i < variables.LaylistHatch.Length; i++)
-                {
-                    var hatchAreas = GetHatchArea(tr, hatches[i]);
-                    var areHatchesInside = AreObjectsInsidePlot(plotRegions, hatches[i]);
-                    for (var j = 0; j < hatches[i].Count; j++)
-                    {
-                        hatchModelList.Add(new DataElementModel(hatchAreas[j], i, areHatchesInside[j]));
-                    }
-                }
+                //Getting data for Hatch table
+                var hatchModelList = GetHatchData(variables, tr, xRef, plotRegions);
                 //Filling hatch table
-                _dataExport.FillTableWithData(tr, hatchModelList, variables.Th, variables.LaylistHatch.Length, "0.##");
+                int tableLength = variables.LaylistHatch.Length + variables.LaylistHatchRoof.Length + variables.LaylistHatchKindergarten.Length + variables.LaylistHatchKindergartenOnRoof.Length + 14;
+                _dataExport.FillTableWithData(tr, hatchModelList, variables.Th, tableLength, "0.##");
             }
             catch (System.Exception ex)
             {
                 System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
             }
         }
+
+        private List<DataElementModel> GetHatchData(Variables variables, Transaction tr, string xRef, List<Region> plotRegions)
+        {
+            List<DataElementModel> hatchModelList = new();
+            //getting hatches
+            List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
+            for (var i = 0; i < variables.LaylistHatch.Length; i++)
+            {
+                hatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i], xRef);
+            }
+            List<Hatch>[] roofHatches = new List<Hatch>[variables.LaylistHatchRoof.Length];
+            for (var i = 0; i < variables.LaylistHatchRoof.Length; i++)
+            {
+                roofHatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchRoof[i], xRef);
+            }
+            List<Hatch>[] kindergartenHatches = new List<Hatch>[variables.LaylistHatchKindergarten.Length];
+            for (var i = 0; i < variables.LaylistHatchKindergarten.Length; i++)
+            {
+                kindergartenHatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchKindergarten[i], xRef);
+            }
+            List<Hatch>[] kindergartenHatchesOnRoof = new List<Hatch>[variables.LaylistHatchKindergartenOnRoof.Length];
+            for (var i = 0; i < variables.LaylistHatchKindergartenOnRoof.Length; i++)
+            {
+                kindergartenHatchesOnRoof[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchKindergartenOnRoof[i], xRef);
+            }
+            //splitting hatches between inside kindergarten and outside
+            var kindergartenPlot = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[2], xRef); ;
+            List<Hatch>[] pavementHatchesInKindergarten = new List<Hatch>[4];
+            List<Hatch>[] greeneryHatchesInKindergarten = new List<Hatch>[3];
+            List<Hatch>[] pavementHatchesInKindergartenOnRoof = new List<Hatch>[4];
+            List<Hatch>[] greeneryHatchesInKindergartenOnRoof = new List<Hatch>[3];
+            if (kindergartenPlot.Count != 0)
+            {
+                var kindergartenRegion = CreateRegionsWithHoleSupport(kindergartenPlot);
+                for (int i = 0; i < 5; i++)
+                {
+                    if (i == 1)
+                        continue;
+                    int currentNumber = i > 1 ? i - 1 : i;
+                    pavementHatchesInKindergarten[currentNumber] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, hatches[i]);
+                    foreach (var item in pavementHatchesInKindergarten[currentNumber])
+                    {
+                        hatches[i].Remove(item);
+                    }
+                }
+                for (int i = 0; i < 3; i++)
+                {
+                    greeneryHatchesInKindergarten[i] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, hatches[i + 10]);
+                    foreach (var item in greeneryHatchesInKindergarten[i])
+                    {
+                        hatches[i + 10].Remove(item);
+                    }
+                }
+                for (int i = 0; i < 5; i++)
+                {
+                    if (i == 1)
+                        continue;
+                    int currentNumber = i > 1 ? i - 1 : i;
+                    pavementHatchesInKindergartenOnRoof[currentNumber] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, roofHatches[i]);
+                    foreach (var item in pavementHatchesInKindergartenOnRoof[currentNumber])
+                    {
+                        roofHatches[i].Remove(item);
+                    }
+                }
+                for (int i = 0; i < 3; i++)
+                {
+                    greeneryHatchesInKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, roofHatches[i + 10]);
+                    foreach (var item in greeneryHatchesInKindergartenOnRoof[i])
+                    {
+                        roofHatches[i + 10].Remove(item);
+                    }
+                }
+            }
+
+            //creating data for table
+            int currentLine = 0;
+            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, hatches, currentLine));
+            currentLine += hatches.Length;
+            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, pavementHatchesInKindergarten, currentLine));
+            currentLine += pavementHatchesInKindergarten.Length;
+            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, kindergartenHatches, currentLine));
+            currentLine += kindergartenHatches.Length;
+            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, greeneryHatchesInKindergarten, currentLine));
+            currentLine += greeneryHatchesInKindergarten.Length;
+            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, roofHatches, currentLine));
+            currentLine += roofHatches.Length;
+            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, pavementHatchesInKindergartenOnRoof, currentLine));
+            currentLine += pavementHatchesInKindergartenOnRoof.Length;
+            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, kindergartenHatchesOnRoof, currentLine));
+            currentLine += kindergartenHatchesOnRoof.Length;
+            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, greeneryHatchesInKindergartenOnRoof, currentLine));
+            return hatchModelList;
+        }
+
+        private List<DataElementModel> CreateDataElements(Transaction tr, List<Region> plotRegions, List<Hatch>[] hatches, int startingNumber)
+        {
+            List<DataElementModel> hatchModelList = new();
+            for (var i = 0; i < hatches.Length; i++)
+            {
+                var hatchAreas = GetHatchArea(tr, hatches[i]);
+                var areHatchesInside = AreObjectsInsidePlot(plotRegions, hatches[i]);
+                for (var j = 0; j < hatches[i].Count; j++)
+                {
+                    hatchModelList.Add(new DataElementModel(hatchAreas[j], startingNumber + i, areHatchesInside[j]));
+                }
+            }
+            return hatchModelList;
+        }
+
+        private List<T> GetListOfElementsThatAreInsideRegion<T>(List<Region> region, List<T> elements)
+        {
+            List<T> elementsInside = new();
+            var areHatchesInside = AreObjectsInsidePlot<T>(region, elements);
+            for (var i = 0; i < elements.Count; i++)
+            {
+                if (areHatchesInside[i])
+                {
+                    elementsInside.Add(elements[i]);
+                }
+            }
+            return elementsInside;
+        }
+
         private void CalculateAndFillParamBlocksTable(Variables variables, Transaction tr, List<Region> plotRegions)
         {
             try
