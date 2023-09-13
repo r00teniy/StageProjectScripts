@@ -655,7 +655,7 @@ namespace StageProjectScripts.Functions
                     areaInside += workReg.Area;
                     foreach (var item in plotRegions)
                     {
-                        workReg.BooleanOperation(BooleanOperationType.BoolSubtract, item);
+                        workReg.BooleanOperation(BooleanOperationType.BoolSubtract, (Region)item.Clone());
                     }
                     areaOutside += workReg.Area;
                 }
