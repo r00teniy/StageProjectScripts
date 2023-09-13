@@ -599,57 +599,55 @@ namespace StageProjectScripts.Functions
                         hatches[i + 10].Remove(item);
                     }
                 }
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < 4; i++)
                 {
-                    if (i == 1)
-                        continue;
-                    int currentNumber = i > 1 ? i - 1 : i;
-                    pavementHatchesInKindergartenOnRoof[currentNumber] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, roofHatches[i]);
-                    foreach (var item in pavementHatchesInKindergartenOnRoof[currentNumber])
+                    pavementHatchesInKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, roofHatches[i]);
+                    foreach (var item in pavementHatchesInKindergartenOnRoof[i])
                     {
                         roofHatches[i].Remove(item);
                     }
                 }
                 for (int i = 0; i < 3; i++)
                 {
-                    greeneryHatchesInKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, roofHatches[i + 10]);
+                    greeneryHatchesInKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, roofHatches[i + 9]);
                     foreach (var item in greeneryHatchesInKindergartenOnRoof[i])
                     {
-                        roofHatches[i + 10].Remove(item);
+                        roofHatches[i + 9].Remove(item);
                     }
                 }
             }
 
             //creating data for table
             int currentLine = 0;
-            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, hatches, currentLine));
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, hatches, currentLine));
             currentLine += hatches.Length;
-            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, pavementHatchesInKindergarten, currentLine));
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, pavementHatchesInKindergarten, currentLine));
             currentLine += pavementHatchesInKindergarten.Length;
-            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, kindergartenHatches, currentLine));
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, kindergartenHatches, currentLine));
             currentLine += kindergartenHatches.Length;
-            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, greeneryHatchesInKindergarten, currentLine));
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, greeneryHatchesInKindergarten, currentLine));
             currentLine += greeneryHatchesInKindergarten.Length;
-            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, roofHatches, currentLine));
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, roofHatches, currentLine));
             currentLine += roofHatches.Length;
-            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, pavementHatchesInKindergartenOnRoof, currentLine));
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, pavementHatchesInKindergartenOnRoof, currentLine));
             currentLine += pavementHatchesInKindergartenOnRoof.Length;
-            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, kindergartenHatchesOnRoof, currentLine));
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, kindergartenHatchesOnRoof, currentLine));
             currentLine += kindergartenHatchesOnRoof.Length;
-            hatchModelList.AddRange(CreateDataElements(tr, plotRegions, greeneryHatchesInKindergartenOnRoof, currentLine));
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, greeneryHatchesInKindergartenOnRoof, currentLine));
             return hatchModelList;
         }
 
-        private List<DataElementModel> CreateDataElements(Transaction tr, List<Region> plotRegions, List<Hatch>[] hatches, int startingNumber)
+        private List<DataElementModel> CreateDataElementsHatches(Transaction tr, List<Region> plotRegions, List<Hatch>[] hatches, int startingNumber)
         {
             List<DataElementModel> hatchModelList = new();
             for (var i = 0; i < hatches.Length; i++)
             {
-                var hatchAreas = GetHatchArea(tr, hatches[i]);
+                var quantity = GetHatchArea(tr, hatches[i]);
                 var areHatchesInside = AreObjectsInsidePlot(plotRegions, hatches[i]);
+
                 for (var j = 0; j < hatches[i].Count; j++)
                 {
-                    hatchModelList.Add(new DataElementModel(hatchAreas[j], startingNumber + i, areHatchesInside[j]));
+                    hatchModelList.Add(new DataElementModel(quantity[j], startingNumber + i, areHatchesInside[j]));
                 }
             }
             return hatchModelList;
@@ -755,42 +753,76 @@ namespace StageProjectScripts.Functions
                 {
                     polylinesForAreas[i] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[i], xRef);
                 }
-                //Creating regions
+                //Splitting working zone between in and out GPZU
+                //Creating region
                 var workingRegions = CreateRegionsWithHoleSupport(polylinesForAreas[0]);
-                //Work with regions to determine what is outside GPZU
-                double areaOutside = 0;
-                double areaInside = 0;
-                foreach (var workReg in workingRegions)
+                plineAreaModelList.AddRange(SplitRegionByInsideOutsideAndCreateDataElement(plotRegions, workingRegions, 0));
+
+                var buildingRegions = CreateRegionsWithHoleSupport(polylinesForAreas[1]);
+                plineAreaModelList.AddRange(SplitRegionByInsideOutsideAndCreateDataElement(plotRegions, buildingRegions, 1));
+                //Splitting Kindergarten between roof and not roof
+                var kindergartenRegions = CreateRegionsWithHoleSupport(polylinesForAreas[2]);
+                var kindergartenRegionOnRoof = (Region)kindergartenRegions[0].Clone();
+                if (kindergartenRegions.Count == 1)
                 {
-                    areaInside += workReg.Area;
-                    foreach (var item in plotRegions)
+                    foreach (var region in buildingRegions)
                     {
-                        workReg.BooleanOperation(BooleanOperationType.BoolSubtract, item);
+                        kindergartenRegions[0].BooleanOperation(BooleanOperationType.BoolSubtract, region);
                     }
-                    areaOutside += workReg.Area;
+
+                    plineAreaModelList.AddRange(SplitRegionByInsideOutsideAndCreateDataElement(plotRegions, new List<Region> { kindergartenRegions[0] }, 2));
+
+                    kindergartenRegionOnRoof.BooleanOperation(BooleanOperationType.BoolSubtract, kindergartenRegions[0]);
+
+                    plineAreaModelList.AddRange(SplitRegionByInsideOutsideAndCreateDataElement(plotRegions, new List<Region> { kindergartenRegionOnRoof }, 3));
                 }
-                areaInside -= areaOutside;
+                else if (kindergartenRegions.Count > 1)
+                {
+                    System.Windows.MessageBox.Show("На слое границы садика больше одной полилинии, что недопустимо", "Error", System.Windows.MessageBoxButton.OK);
+                    return;
+                }
 
-                plineAreaModelList.Add(new DataElementModel(areaInside, 0, true));
-                plineAreaModelList.Add(new DataElementModel(areaOutside, 0, false));
 
-                for (int i = 1; i < variables.LaylistPlA.Length; i++)
+                for (int i = 3; i < variables.LaylistPlA.Length; i++)
                 {
                     var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotRegions, polylinesForAreas[i]);
                     for (int j = 0; j < polylinesForAreas[i].Count; j++)
                     {
                         object pl = polylinesForAreas[i][j];
                         var plineArea = (double)pl.GetType().InvokeMember("Area", BindingFlags.GetProperty, null, pl, null);
-                        plineAreaModelList.Add(new DataElementModel(plineArea, i, arePlinesInside[j]));
+                        plineAreaModelList.Add(new DataElementModel(plineArea, i + 1, arePlinesInside[j]));
                     }
                 }
                 //Filling Polyline Area table
-                _dataExport.FillTableWithData(tr, plineAreaModelList, variables.Tpa, variables.LaylistPlA.Length, "0.##");
+                _dataExport.FillTableWithData(tr, plineAreaModelList, variables.Tpa, variables.LaylistPlA.Length + 1, "0.##");
             }
             catch (System.Exception ex)
             {
                 System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
             }
+        }
+
+        private List<DataElementModel> SplitRegionByInsideOutsideAndCreateDataElement(List<Region> regionsToSplitBy, List<Region> workingRegions, int numberInTable)
+        {
+            List<DataElementModel> dataElementModelList = new();
+            //Work with regions to determine what is outside GPZU
+            double areaOutside = 0;
+            double areaInside = 0;
+            foreach (var workReg in workingRegions)
+            {
+                var tempReg = (Region)workReg.Clone();
+                areaInside += workReg.Area;
+                foreach (var item in regionsToSplitBy)
+                {
+                    tempReg.BooleanOperation(BooleanOperationType.BoolSubtract, (Region)item.Clone());
+                }
+                areaOutside += tempReg.Area;
+            }
+            areaInside -= areaOutside;
+
+            dataElementModelList.Add(new DataElementModel(areaInside, numberInTable, true));
+            dataElementModelList.Add(new DataElementModel(areaOutside, numberInTable, false));
+            return dataElementModelList;
         }
 
         private void CalculateAndFillPolylineLengthTable(Variables variables, Transaction tr, string xRef, List<Region> plotRegions)
@@ -799,27 +831,76 @@ namespace StageProjectScripts.Functions
             {
                 List<DataElementModel> plineLengthModelList = new();
                 List<Polyline>[] polylinesForLines = new List<Polyline>[variables.LaylistPlL.Length];
+                List<Polyline>[] polylinesForLinesOnRoof = new List<Polyline>[variables.LaylistPlL.Length];
                 for (var i = 0; i < variables.LaylistPlL.Length; i++)
                 {
                     polylinesForLines[i] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlL[i], xRef);
                 }
-                for (var i = 0; i < variables.LaylistPlL.Length; i++)
+                //separating polylines that are on top on roof
+                var roofBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[1], xRef);
+                var roofRegion = CreateRegionsWithHoleSupport(roofBorders);
+                for (int i = 0; i < polylinesForLines.Length; i++)
                 {
-                    var plineLengths = polylinesForLines[i].Select(x => x.Length / variables.CurbLineCount[i]).ToList();
-                    var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotRegions, polylinesForLines[i]);
-                    for (var j = 0; j < polylinesForLines[i].Count; j++)
+                    polylinesForLinesOnRoof[i] = GetListOfElementsThatAreInsideRegion<Polyline>(roofRegion, polylinesForLines[i]);
+                    foreach (var polyline in polylinesForLinesOnRoof[i])
                     {
-                        plineLengthModelList.Add(new DataElementModel(plineLengths[j], i, arePlinesInside[j]));
+                        polylinesForLines[i].Remove(polyline);
                     }
                 }
+                //seperating kindergarten part
+                var kindergartenBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[2], xRef);
+                var kindergartenRegion = CreateRegionsWithHoleSupport(kindergartenBorders);
+                List<Polyline>[] polylinesForLinesKindergarten = new List<Polyline>[variables.LaylistPlL.Length];
+                for (int i = 0; i < polylinesForLines.Length; i++)
+                {
+                    polylinesForLinesKindergarten[i] = GetListOfElementsThatAreInsideRegion<Polyline>(kindergartenRegion, polylinesForLines[i]);
+                    foreach (var polyline in polylinesForLinesKindergarten[i])
+                    {
+                        polylinesForLines[i].Remove(polyline);
+                    }
+                }
+                List<Polyline>[] polylinesForLinesKindergartenOnRoof = new List<Polyline>[variables.LaylistPlL.Length];
+                for (int i = 0; i < polylinesForLinesOnRoof.Length; i++)
+                {
+                    polylinesForLinesKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Polyline>(kindergartenRegion, polylinesForLinesOnRoof[i]);
+                    foreach (var polyline in polylinesForLinesKindergartenOnRoof[i])
+                    {
+                        polylinesForLinesOnRoof[i].Remove(polyline);
+                    }
+                }
+                //Creating dataelement Models
+                int lineCounter = 0;
+                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLines, lineCounter));
+                lineCounter += polylinesForLines.Length;
+                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesKindergarten, lineCounter));
+                lineCounter += polylinesForLines.Length;
+                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesOnRoof, lineCounter));
+                lineCounter += polylinesForLines.Length;
+                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesKindergartenOnRoof, lineCounter));
                 //Filling Polyline length table
-                _dataExport.FillTableWithData(tr, plineLengthModelList, variables.Tpl, variables.LaylistPlL.Length, "0");
+                _dataExport.FillTableWithData(tr, plineLengthModelList, variables.Tpl, lineCounter + polylinesForLines.Length, "0");
             }
             catch (System.Exception ex)
             {
                 System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
             }
         }
+
+        private List<DataElementModel> CreateElementsModelListPolylines(Variables variables, List<Region> plotRegions, List<Polyline>[] polylines, int startingLine)
+        {
+            List<DataElementModel> plineLengthModelList = new();
+            for (var i = 0; i < variables.LaylistPlL.Length; i++)
+            {
+                var plineLengths = polylines[i].Select(x => x.Length / variables.CurbLineCount[i]).ToList();
+                var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotRegions, polylines[i]);
+                for (var j = 0; j < polylines[i].Count; j++)
+                {
+                    plineLengthModelList.Add(new DataElementModel(plineLengths[j], i + startingLine, arePlinesInside[j]));
+                }
+            }
+            return plineLengthModelList;
+        }
+
         //creating regions from polylines with hole support
         private List<Region> CreateRegionsWithHoleSupport(List<Polyline> polylines)
         {
