@@ -833,23 +833,32 @@ namespace StageProjectScripts.Functions
         }
         private PointContainment GetPointContainment(List<Region> regions, Point3d point)
         {
-            var result = PointContainment.Outside;
+            List<PointContainment> resultsByRegion = new();
             foreach (var region in regions)
             {
-                var tempResult = PointContainment.Outside;
+                var result = PointContainment.Outside;
                 using (Brep brep = new(region))
                 {
                     if (brep != null)
                     {
-                        using (BrepEntity ent = brep.GetPointContainment(point, out tempResult))
+                        using (BrepEntity ent = brep.GetPointContainment(point, out result))
                         {
                             if (ent is AcBr.Face)
                                 result = PointContainment.Inside;
                         }
                     }
                 }
+                resultsByRegion.Add(result);
             }
-            return result;
+            if (resultsByRegion.Where(x => x == PointContainment.Inside).Count() > 0)
+            {
+                return PointContainment.Inside;
+            }
+            if (resultsByRegion.Where(x => x == PointContainment.Outside).Count() > 0)
+            {
+                return PointContainment.Outside;
+            }
+            return PointContainment.OnBoundary;
         }
         //Getting hatch border or polyline points to check if it is inside plot or not
         private List<Point3d> GetPointsFromObject<T>(T obj)
