@@ -363,15 +363,23 @@ namespace StageProjectScripts.Functions
         }
         private void CheckHatchesAndPolylinesForIntersectionsWithRegions(Variables variables, Transaction tr, List<Region> plotRegions, List<Hatch>[] hatches, List<Polyline>[] polylinesForLines, string borderName)
         {
-            List<Point3d> errorPoints = new();
+            List<(Point3d, Point3d)> errorPoints = new();
+            List<Region> errorRegions = new();
             //Checking hatches
             for (var i = 0; i < hatches.Length; i++)
             {
-                foreach (var hat in hatches[i])
+                int regErrors = 0;
+                var reg = CreateRegionsFromHatches(hatches[i], out regErrors);
+                foreach (var r in reg)
                 {
-                    if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Hatch>(hat), plotRegions) is var res && res != null)
+                    var rOriginal = (Region)r.Clone();
+                    foreach (var plReg in plotRegions)
                     {
-                        errorPoints.Add((Point3d)res);
+                        r.BooleanOperation(BooleanOperationType.BoolSubtract, (Region)plReg.Clone());
+                    }
+                    if (r.Area != 0 && r.Area != rOriginal.Area)
+                    {
+                        errorRegions.Add(r);
                     }
                 }
             }
@@ -383,19 +391,36 @@ namespace StageProjectScripts.Functions
                 {
                     if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Polyline>(pl), plotRegions) is var res && res != null)
                     {
-                        errorPoints.Add((Point3d)res);
+                        errorPoints.Add(((Point3d, Point3d))res);
                     }
                 }
             }
             //Results
             if (errorPoints.Count == 0)
             {
-                System.Windows.MessageBox.Show($"Пересечений элементов с границей {borderName} нет", "Сообщение", System.Windows.MessageBoxButton.OK);
+                System.Windows.MessageBox.Show($"Пересечений полилиний с границей {borderName} нет", "Сообщение", System.Windows.MessageBoxButton.OK);
             }
             else
             {
-                System.Windows.MessageBox.Show($"Найдено {errorPoints.Count} объектов, пересекающих границу {borderName}", "Error", System.Windows.MessageBoxButton.OK);
-                _dataExport.CreateTempCircleOnPoint(variables, tr, errorPoints);
+                System.Windows.MessageBox.Show($"Найдено {errorPoints.Count} полилиний, пересекающих границу {borderName}", "Error", System.Windows.MessageBoxButton.OK);
+                _dataExport.CreateTempLine(variables, tr, errorPoints);
+            }
+            if (errorRegions.Count == 0)
+            {
+                System.Windows.MessageBox.Show($"Пересечений штриховок с границей {borderName} нет", "Сообщение", System.Windows.MessageBoxButton.OK);
+            }
+            else
+            {
+                System.Windows.MessageBox.Show($"Найдено {errorRegions.Count} штриховок, пересекающих границу {borderName}", "Error", System.Windows.MessageBoxButton.OK);
+                _dataExport.LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
+                var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                foreach (var item in errorRegions)
+                {
+                    item.Layer = variables.TempLayer;
+                    btr.AppendEntity(item);
+                    tr.AddNewlyCreatedDBObject(item, true);
+                }
             }
         }
 
@@ -1227,7 +1252,7 @@ namespace StageProjectScripts.Functions
             return isFirstPointIn == PointContainment.Inside;
         }
         //Getting points that are on other side of plotBorder
-        private Point3d? ArePointsOnBothSidesOfBorder(List<Point3d> points, List<Region> regions)
+        private (Point3d, Point3d)? ArePointsOnBothSidesOfBorder(List<Point3d> points, List<Region> regions)
         {
             var isFirstPointIn = GetPointContainment(regions, points[0]);
             for (int i = 1; i < points.Count; i++)
@@ -1241,7 +1266,7 @@ namespace StageProjectScripts.Functions
                     }
                     else if (isThisPointIn != PointContainment.OnBoundary)
                     {
-                        return points[i];
+                        return (points[i], points[i - 1]);
                     }
                 }
             }
