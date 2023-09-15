@@ -41,7 +41,9 @@ namespace StageProjectScripts.Functions
                     //Finding intersecting Hatches
                     List<Hatch> hatches = new();
                     var layersToCheck = variables.LaylistHatch.ToList();
-                    layersToCheck.AddRange(variables.LaylistPlA);
+                    layersToCheck.AddRange(variables.LaylistHatchRoof);
+                    layersToCheck.AddRange(variables.LaylistHatchKindergartenOnRoof);
+                    layersToCheck.AddRange(variables.LaylistHatchKindergarten);
                     for (var i = 0; i < layersToCheck.Count; i++)
                     {
                         hatches.AddRange(_dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, layersToCheck[i]));
@@ -229,30 +231,30 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    List<Hatch> hatches = new();
-                    for (var i = 0; i < variables.LaylistHatch.Length; i++)
+                    List<Hatch>[] allHatches = GetAllHatchesToCheck(variables, tr);
+
+                    foreach (var hatches in allHatches)
                     {
-                        hatches.AddRange(_dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i]));
-                    }
-                    foreach (var hat in hatches)
-                    {
-                        try
+                        foreach (var hat in hatches)
                         {
-                            Plane plane = hat.GetPlane();
-                            for (int k = 0; k < hat.NumberOfLoops; k++)
+                            try
                             {
-                                HatchLoop loop = hat.GetLoopAt(k);
-                                HatchLoopTypes hlt = hat.LoopTypeAt(k);
-                                Polyline loopArea = GetBorderFromHatchLoop(loop, plane);
-                                if (CreateRegionFromPolyline(loopArea) == null)
+                                Plane plane = hat.GetPlane();
+                                for (int k = 0; k < hat.NumberOfLoops; k++)
                                 {
-                                    errorHatches.Add(hat.ObjectId);
+                                    HatchLoop loop = hat.GetLoopAt(k);
+                                    HatchLoopTypes hlt = hat.LoopTypeAt(k);
+                                    Polyline loopArea = GetBorderFromHatchLoop(loop, plane);
+                                    if (CreateRegionFromPolyline(loopArea) == null)
+                                    {
+                                        errorHatches.Add(hat.ObjectId);
+                                    }
                                 }
                             }
-                        }
-                        catch
-                        {
-                            errorHatches.Add(hat.ObjectId);
+                            catch
+                            {
+                                errorHatches.Add(hat.ObjectId);
+                            }
                         }
                     }
                     System.Windows.MessageBox.Show($"Найдено {errorHatches.Count} проблемных штриховок, просьба проверить их или пересоздать", "Сообщение", System.Windows.MessageBoxButton.OK);
@@ -272,20 +274,19 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    List<Hatch> hatches = new();
-                    for (var i = 0; i < variables.LaylistHatch.Length; i++)
+                    List<Hatch>[] allHatches = GetAllHatchesToCheck(variables, tr);
+                    foreach (var hatches in allHatches)
                     {
-                        hatches.AddRange(_dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i]));
-                    }
-                    foreach (var hat in hatches)
-                    {
-                        try
+                        foreach (var hat in hatches)
                         {
-                            var test = hat.Area;
-                        }
-                        catch
-                        {
-                            errorHatches.Add(hat.ObjectId);
+                            try
+                            {
+                                var test = hat.Area;
+                            }
+                            catch
+                            {
+                                errorHatches.Add(hat.ObjectId);
+                            }
                         }
                     }
                     System.Windows.MessageBox.Show($"Найдено {errorHatches.Count} самопересекающихся штриховок", "Сообщение", System.Windows.MessageBoxButton.OK);
@@ -300,76 +301,140 @@ namespace StageProjectScripts.Functions
         }
         public void CheckForBorderIntersections(Variables variables, string plotXref, string plotNumber)
         {
-            List<Point3d> errorPoints = new();
             using (DocumentLock acLckDoc = doc.LockDocument())
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    var plotBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.PlotLayer + plotNumber.Replace(':', '_'), plotXref);
-                    foreach (var item in plotBorders)
+                    //Getting elements to check
+                    List<Hatch>[] hatches = GetAllHatchesToCheck(variables, tr);
+                    List<Polyline>[] polylines = GetAllPolylinesToCheck(variables, tr);
+                    //Checking elements with every border
+                    //Plotborder
+                    var plotRegions = GenerateRegionsFromBorders(tr, variables.PlotLayer, "ГПЗУ", plotNumber, plotXref);
+                    if (plotRegions != null)
                     {
-                        if (!item.Closed)
-                        {
-                            System.Windows.MessageBox.Show("Границы участка должны быть замкнутыми, проверьте что все полилиниии границы участка замкнуты в свойствах", "Сообщение", System.Windows.MessageBoxButton.OK);
-                            tr.Commit();
-                            return;
-                        }
+                        CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatches, polylines, "ГПЗУ");
                     }
-                    if (plotBorders.Count == 0)
+                    //WorkingZoneBorder
+                    plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[0], "Благоустройства");
+                    if (plotRegions != null)
                     {
-                        return;
+                        CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatches, polylines, "Благоустройства");
                     }
-                    var plotRegions = CreateRegionsWithHoleSupport(plotBorders);
-                    List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
-                    for (var i = 0; i < variables.LaylistHatch.Length; i++)
+                    //BuildingBorder
+                    plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[1], "Зданий");
+                    if (plotRegions != null)
                     {
-                        hatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i]);
+                        CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatches, polylines, "Зданий");
                     }
-                    //Checking hatches
-                    for (var i = 0; i < variables.LaylistHatch.Length; i++)
+                    //KindergartenBorder
+                    plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[2], "Детского сада");
+                    if (plotRegions != null)
                     {
-                        foreach (var hat in hatches[i])
-                        {
-                            if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Hatch>(hat), plotRegions) is var res && res != null)
-                            {
-                                errorPoints.Add((Point3d)res);
-                            }
-                        }
+                        CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatches, polylines, "Детского сада");
                     }
-                    //Checking polylines
-                    List<Polyline>[] polylinesForLines = new List<Polyline>[variables.LaylistPlL.Length + variables.LaylistPlA.Length - 1];
-                    for (var i = 0; i < variables.LaylistPlL.Length; i++)
-                    {
-                        polylinesForLines[i] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlL[i]);
-                    }
-                    for (int i = 1; i < variables.LaylistPlA.Length; i++)
-                    {
-                        polylinesForLines[variables.LaylistPlL.Length + i - 1] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[i]);
-                    }
-                    for (var i = 0; i < polylinesForLines.Length; i++)
-                    {
-                        foreach (var pl in polylinesForLines[i])
-                        {
-                            if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Polyline>(pl), plotRegions) is var res && res != null)
-                            {
-                                errorPoints.Add((Point3d)res);
-                            }
-                        }
-                    }
-                    //Results
-                    if (errorPoints.Count == 0)
-                    {
-                        System.Windows.MessageBox.Show("Пересечений элементов с границей ГПЗУ нет", "Сообщение", System.Windows.MessageBoxButton.OK);
-                    }
-                    else
-                    {
-                        System.Windows.MessageBox.Show($"Найдено {errorPoints.Count} объектов, пересекающих границу ГПЗУ", "Error", System.Windows.MessageBoxButton.OK);
-                        _dataExport.CreateTempCircleOnPoint(variables, tr, errorPoints);
-                    }
+
                     tr.Commit();
                 }
             }
         }
+
+        private List<Region> GenerateRegionsFromBorders(Transaction tr, string layer, string borderName, string plotNumber = null, string plotXref = null)
+        {
+            var borderLayer = plotNumber != null ? layer + plotNumber.Replace(':', '_') : layer;
+            List<Polyline> plotBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, borderLayer, plotXref);
+            foreach (var item in plotBorders)
+            {
+                if (!item.Closed)
+                {
+                    System.Windows.MessageBox.Show($"Границы {borderName} должны быть замкнутыми, проверьте что все полилиниии границы замкнуты в свойствах", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    return null;
+                }
+            }
+            if (plotBorders.Count != 0)
+            {
+                return CreateRegionsWithHoleSupport(plotBorders);
+            }
+            else
+            {
+                System.Windows.MessageBox.Show($"На слое границ {borderName} нет полилиний", "Сообщение", System.Windows.MessageBoxButton.OK);
+                return null;
+            }
+        }
+        private void CheckHatchesAndPolylinesForIntersectionsWithRegions(Variables variables, Transaction tr, List<Region> plotRegions, List<Hatch>[] hatches, List<Polyline>[] polylinesForLines, string borderName)
+        {
+            List<Point3d> errorPoints = new();
+            //Checking hatches
+            for (var i = 0; i < hatches.Length; i++)
+            {
+                foreach (var hat in hatches[i])
+                {
+                    if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Hatch>(hat), plotRegions) is var res && res != null)
+                    {
+                        errorPoints.Add((Point3d)res);
+                    }
+                }
+            }
+            //Checking polylines
+
+            for (var i = 0; i < polylinesForLines.Length; i++)
+            {
+                foreach (var pl in polylinesForLines[i])
+                {
+                    if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Polyline>(pl), plotRegions) is var res && res != null)
+                    {
+                        errorPoints.Add((Point3d)res);
+                    }
+                }
+            }
+            //Results
+            if (errorPoints.Count == 0)
+            {
+                System.Windows.MessageBox.Show($"Пересечений элементов с границей {borderName} нет", "Сообщение", System.Windows.MessageBoxButton.OK);
+            }
+            else
+            {
+                System.Windows.MessageBox.Show($"Найдено {errorPoints.Count} объектов, пересекающих границу {borderName}", "Error", System.Windows.MessageBoxButton.OK);
+                _dataExport.CreateTempCircleOnPoint(variables, tr, errorPoints);
+            }
+        }
+
+        private List<Polyline>[] GetAllPolylinesToCheck(Variables variables, Transaction tr)
+        {
+            List<Polyline>[] polylinesForLines = new List<Polyline>[variables.LaylistPlL.Length];
+            for (var i = 0; i < variables.LaylistPlL.Length; i++)
+            {
+                polylinesForLines[i] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlL[i]);
+            }
+            return polylinesForLines;
+        }
+
+        private List<Hatch>[] GetAllHatchesToCheck(Variables variables, Transaction tr)
+        {
+            var hatches = new List<Hatch>[variables.LaylistHatch.Length + variables.LaylistHatchRoof.Length + variables.LaylistHatchKindergarten.Length + variables.LaylistHatchKindergartenOnRoof.Length];
+            int currentId = 0;
+            for (var i = 0; i < variables.LaylistHatch.Length; i++)
+            {
+                hatches[i + currentId] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i]);
+            }
+            currentId += variables.LaylistHatch.Length;
+            for (var i = 0; i < variables.LaylistHatchRoof.Length; i++)
+            {
+                hatches[i + currentId] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchRoof[i]);
+            }
+            currentId += variables.LaylistHatchRoof.Length;
+            for (var i = 0; i < variables.LaylistHatchKindergarten.Length; i++)
+            {
+                hatches[i + currentId] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchKindergarten[i]);
+            }
+            currentId += variables.LaylistHatchKindergarten.Length;
+            for (var i = 0; i < variables.LaylistHatchKindergartenOnRoof.Length; i++)
+            {
+                hatches[i + currentId] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchKindergartenOnRoof[i]);
+            }
+            return hatches;
+        }
+
         public void LabelPavements(Variables variables, string xRef)
         {
             using (DocumentLock acLckDoc = doc.LockDocument())
@@ -1083,23 +1148,32 @@ namespace StageProjectScripts.Functions
         }
         private PointContainment GetPointContainment(List<Region> regions, Point3d point)
         {
-            var result = PointContainment.Outside;
+            List<PointContainment> resultsByRegion = new();
             foreach (var region in regions)
             {
-                var tempResult = PointContainment.Outside;
+                var result = PointContainment.Outside;
                 using (Brep brep = new(region))
                 {
                     if (brep != null)
                     {
-                        using (BrepEntity ent = brep.GetPointContainment(point, out tempResult))
+                        using (BrepEntity ent = brep.GetPointContainment(point, out result))
                         {
                             if (ent is AcBr.Face)
                                 result = PointContainment.Inside;
                         }
                     }
                 }
+                resultsByRegion.Add(result);
             }
-            return result;
+            if (resultsByRegion.Where(x => x == PointContainment.Inside).Count() > 0)
+            {
+                return PointContainment.Inside;
+            }
+            if (resultsByRegion.Where(x => x == PointContainment.Outside).Count() > 0)
+            {
+                return PointContainment.Outside;
+            }
+            return PointContainment.OnBoundary;
         }
         //Getting hatch border or polyline points to check if it is inside plot or not
         private List<Point3d> GetPointsFromObject<T>(T obj)
@@ -1146,7 +1220,7 @@ namespace StageProjectScripts.Functions
                     }
                     else if (isThisPointIn != PointContainment.OnBoundary)
                     {
-                        throw new System.Exception("Одна из полилиний или штриховок пересекает границу участка, необходимо исправить.");
+                        throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
                     }
                 }
             }

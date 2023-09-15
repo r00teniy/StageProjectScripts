@@ -56,7 +56,7 @@
                 Grid.Column="1"
                 Grid.ColumnSpan="2"
                 FontSize="14"
-                Content="Проверить пересечение с границей ГПЗУ"
+                Content="Проверить пересечение с границами"
                 Margin="10,5,10,5" 
                 Click="CheckIntersections_Click" />
         <Button x:Name="CheckHatches"

@@ -12,7 +12,7 @@ internal class SettingsStorage
     {
         XmlSerializer serializer = new(typeof(Variables));
         Variables variables;
-        using (XmlReader reader = XmlReader.Create(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\StageProjectScriptSettings.xml"))
+        using (XmlReader reader = XmlReader.Create(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\ProjectScriptSettings.xml"))
         {
             variables = (Variables)serializer.Deserialize(reader);
         }
