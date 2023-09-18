@@ -9,7 +9,7 @@ namespace StageProjectScripts
 {
     internal class MyCommands
     {
-        [CommandMethod("StageProjectScripts")]
+        [CommandMethod("ProjectScripts")]
         static public void StageProjectScripts()
         {
             var settingsStorage = new SettingsStorage();
@@ -18,7 +18,7 @@ namespace StageProjectScripts
             var MW = new MainWindow(variables);
             MW.Show();
         }
-        [CommandMethod("StageProjectChecks")]
+        [CommandMethod("ProjectChecks")]
         static public void StageProjectChecks()
         {
             var settingsStorage = new SettingsStorage();

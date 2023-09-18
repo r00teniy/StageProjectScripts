@@ -9,6 +9,9 @@ namespace StageProjectScripts
         public string PlotLayer { get; set; }// = "11_Граница_ЗУ_КН_";
         //Layers for Hatches
         public string[] LaylistHatch { get; set; }// = { "41_Покр_Проезд", "49_Покр_Щебеночный_проезд", "42_Покр_Тротуар", "42_Покр_Тротуар_пожарный", "43_Покр_Отмостка", "44_Покр_Детская_площадка", "45_Покр_Спортивная_площадка", "46_Покр_Площадка_отдыха", "47_Покр_Хоз_площадка", "48_Покр_Площадка_для_собак", "51_Газон", "52_Газон_рулонный", "53_Газон_пожарный" };
+        public string[] LaylistHatchRoof { get; set; }
+        public string[] LaylistHatchKindergarten { get; set; }
+        public string[] LaylistHatchKindergartenOnRoof { get; set; }
         //Layers for polylines to extract length from
         public string[] LaylistPlL { get; set; }// = { "31_Борт_БР100.30.15", "32_Борт_БР100.20.8", "33_Борт_БР100.45.18", "33_Борт_БР100.60.20", "34_Борт_Металл", "35_Борт_Пластик", "36_Борт_1ГП_100.30.15", "37_Борт_4ГП_100.20.10", "38_Борт_2ГП_100.40.18", "38_Борт_3ГП_100.60.20" };
         //Layers for polylines to extract area from

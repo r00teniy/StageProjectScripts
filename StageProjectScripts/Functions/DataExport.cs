@@ -14,7 +14,7 @@ namespace StageProjectScripts.Functions;
 
 internal class DataExport
 {
-    internal void CreateTempCircleOnPoint(Variables variables, Transaction tr, List<Point3d> pts)
+    internal void CreateTempLine(Variables variables, Transaction tr, List<(Point3d, Point3d)> pts)
     {
         //temporary solution
         Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -24,15 +24,16 @@ internal class DataExport
         foreach (var pt in pts)
         {
             LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
-            using (Circle acCirc = new())
+            var (ptStart, ptEnd) = pt;
+            using (Line acLine = new())
             {
-                acCirc.Center = pt;
-                acCirc.Radius = 2;
-                acCirc.Color = Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor);
-                acCirc.Layer = variables.TempLayer;
+                acLine.Color = Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor);
+                acLine.Layer = variables.TempLayer;
+                acLine.StartPoint = ptStart;
+                acLine.EndPoint = ptEnd;
                 // Add the new object to the block table record and the transaction
-                btr.AppendEntity(acCirc);
-                tr.AddNewlyCreatedDBObject(acCirc, true);
+                btr.AppendEntity(acLine);
+                tr.AddNewlyCreatedDBObject(acLine, true);
             }
         }
     }
