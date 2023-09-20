@@ -214,6 +214,10 @@ internal class DataExport
         var tabl = tr.GetObject(id, OpenMode.ForWrite) as Table;
         for (int i = 0; i < numberOfLines; i++)
         {
+            if (tabl.Rows.Count < i + 4)
+            {
+                tabl.InsertRows(tabl.Rows.Count, 8, 1);
+            }
             tabl.Cells[2 + i, 1].TextString = hatches.Where(x => (x.NumberInTable == i) && x.IsInsidePlot).Select(x => x.Amount).Sum().ToString(format);
             tabl.Cells[2 + i, 2].TextString = hatches.Where(x => (x.NumberInTable == i) && !x.IsInsidePlot).Select(x => x.Amount).Sum().ToString(format);
         }

@@ -353,7 +353,7 @@ namespace StageProjectScripts.Functions
             }
             if (plotBorders.Count != 0)
             {
-                return CreateRegionsWithHoleSupport(plotBorders);
+                return CreateRegionsWithHoleSupport(plotBorders, borderName);
             }
             else
             {
@@ -605,7 +605,7 @@ namespace StageProjectScripts.Functions
                     {
                         return;
                     }
-                    var plotRegions = CreateRegionsWithHoleSupport(plotBorders);
+                    var plotRegions = CreateRegionsWithHoleSupport(plotBorders, "ГПЗУ");
 
                     CalculateAndFillHatchTable(variables, tr, xRef, plotRegions);
 
@@ -669,7 +669,7 @@ namespace StageProjectScripts.Functions
             List<Hatch>[] greeneryHatchesInKindergartenOnRoof = new List<Hatch>[3];
             if (kindergartenPlot.Count != 0)
             {
-                var kindergartenRegion = CreateRegionsWithHoleSupport(kindergartenPlot);
+                var kindergartenRegion = CreateRegionsWithHoleSupport(kindergartenPlot, "детского сада");
                 for (int i = 0; i < 5; i++)
                 {
                     if (i == 1)
@@ -699,10 +699,10 @@ namespace StageProjectScripts.Functions
                 }
                 for (int i = 0; i < 3; i++)
                 {
-                    greeneryHatchesInKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, roofHatches[i + 9]);
+                    greeneryHatchesInKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Hatch>(kindergartenRegion, roofHatches[i + 8]);
                     foreach (var item in greeneryHatchesInKindergartenOnRoof[i])
                     {
-                        roofHatches[i + 9].Remove(item);
+                        roofHatches[i + 8].Remove(item);
                     }
                 }
             }
@@ -732,12 +732,15 @@ namespace StageProjectScripts.Functions
             List<DataElementModel> hatchModelList = new();
             for (var i = 0; i < hatches.Length; i++)
             {
-                var quantity = GetHatchArea(tr, hatches[i]);
-                var areHatchesInside = AreObjectsInsidePlot(plotRegions, hatches[i]);
-
-                for (var j = 0; j < hatches[i].Count; j++)
+                if (hatches[i] != null)
                 {
-                    hatchModelList.Add(new DataElementModel(quantity[j], startingNumber + i, areHatchesInside[j]));
+                    var quantity = GetHatchArea(tr, hatches[i]);
+                    var areHatchesInside = AreObjectsInsidePlot(plotRegions, hatches[i]);
+
+                    for (var j = 0; j < hatches[i].Count; j++)
+                    {
+                        hatchModelList.Add(new DataElementModel(quantity[j], startingNumber + i, areHatchesInside[j]));
+                    }
                 }
             }
             return hatchModelList;
@@ -814,75 +817,89 @@ namespace StageProjectScripts.Functions
                 List<List<bool>> normalAreBlocksInsideOnRoof = new();
                 List<List<bool>> kindergartenAreBlocksInside = new();
                 List<List<bool>> kindergartenAreBlocksInsideOnRoof = new();
+
                 var kindergartenBorder = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[2], xRef);
-                var kindergartenRegions = CreateRegionsWithHoleSupport(kindergartenBorder);
+                List<Region> kindergartenRegions = new();
+                if (kindergartenBorder != null && kindergartenBorder.Count > 0)
+                {
+                    kindergartenRegions = CreateRegionsWithHoleSupport(kindergartenBorder, "Детского сада");
+                }
                 var buildingBorder = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[1], xRef);
-                var buildingRegion = CreateRegionsWithHoleSupport(buildingBorder);
+                var buildingRegions = CreateRegionsWithHoleSupport(buildingBorder, "здания");
                 for (int i = 0; i < variables.LaylistBlockCount.Length; i++)
                 {
                     var blockPositions = _dataImport.GetBlocksPosition(tr, variables.LaylistBlockCount[i]);
-                    var areBlocksInsideKindergarten = AreObjectsInsidePlot(kindergartenRegions, blockPositions);
-                    List<Point3d> blocksInsideKindergarten = new();
-                    List<Point3d> blocksOutsideKindergarten = new();
-                    for (var j = 0; j < areBlocksInsideKindergarten.Count; j++)
+
+                    var areBlocksOnRoof = AreObjectsInsidePlot(buildingRegions, blockPositions);
+                    List<Point3d> blocksOnRoof = new();
+                    List<Point3d> blocksNotOnRoof = new();
+                    for (var j = 0; j < areBlocksOnRoof.Count; j++)
                     {
-                        if (areBlocksInsideKindergarten[j])
+                        if (areBlocksOnRoof[j])
                         {
-                            blocksInsideKindergarten.Add(blockPositions[j]);
+                            blocksOnRoof.Add(blockPositions[j]);
                         }
                         else
                         {
-                            blocksOutsideKindergarten.Add(blockPositions[j]);
+                            blocksNotOnRoof.Add(blockPositions[j]);
                         }
                     }
-
-                    var areBlocksInsideKindergartenOnRoof = AreObjectsInsidePlot(buildingRegion, blocksInsideKindergarten);
-                    List<Point3d> blocksInsideKindergartenOnRoof = new();
-                    List<Point3d> blocksInsideKindergartenNotOnRoof = new();
-                    for (var j = 0; j < areBlocksInsideKindergartenOnRoof.Count; j++)
+                    if (kindergartenBorder != null && kindergartenBorder.Count > 0)
                     {
-                        if (areBlocksInsideKindergartenOnRoof[j])
-                        {
-                            blocksInsideKindergartenOnRoof.Add(blocksInsideKindergarten[j]);
-                        }
-                        else
-                        {
-                            blocksInsideKindergartenNotOnRoof.Add(blocksInsideKindergarten[j]);
-                        }
-                    }
+                        List<Point3d> blocksOutsideKindergartenOnRoof = new();
+                        List<Point3d> blocksOutsideKindergartenNotOnRoof = new();
+                        List<Point3d> blocksInsideKindergartenOnRoof = new();
+                        List<Point3d> blocksInsideKindergartenNotOnRoof = new();
 
-                    var areBlocksOutsideKindergartenOnRoof = AreObjectsInsidePlot(buildingRegion, blocksOutsideKindergarten);
-                    List<Point3d> blocksOutsideKindergartenOnRoof = new();
-                    List<Point3d> blocksOutsideKindergartenNotOnRoof = new();
-                    for (var j = 0; j < areBlocksOutsideKindergartenOnRoof.Count; j++)
+                        var areBlocksInsideKindergarten = AreObjectsInsidePlot(kindergartenRegions, blocksNotOnRoof);
+                        for (var j = 0; j < areBlocksInsideKindergarten.Count; j++)
+                        {
+                            if (areBlocksInsideKindergarten[j])
+                            {
+                                blocksInsideKindergartenNotOnRoof.Add(blocksNotOnRoof[j]);
+                            }
+                            else
+                            {
+                                blocksOutsideKindergartenNotOnRoof.Add(blocksNotOnRoof[j]);
+                            }
+                        }
+                        var areBlocksInsideKindergartenOnRoof = AreObjectsInsidePlot(kindergartenRegions, blocksOnRoof);
+                        for (var j = 0; j < blocksOnRoof.Count; j++)
+                        {
+                            if (areBlocksInsideKindergartenOnRoof[j])
+                            {
+                                blocksInsideKindergartenOnRoof.Add(blocksOnRoof[j]);
+                            }
+                            else
+                            {
+                                blocksOutsideKindergartenOnRoof.Add(blocksOnRoof[j]);
+                            }
+                        }
+                        normalAreBlocksInside.Add(AreObjectsInsidePlot(plotRegions, blocksOutsideKindergartenNotOnRoof));
+                        kindergartenAreBlocksInside.Add(AreObjectsInsidePlot(plotRegions, blocksInsideKindergartenNotOnRoof));
+                        normalAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotRegions, blocksOutsideKindergartenOnRoof));
+                        kindergartenAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotRegions, blocksInsideKindergartenOnRoof));
+                    }
+                    else
                     {
-                        if (areBlocksOutsideKindergartenOnRoof[j])
-                        {
-                            blocksOutsideKindergartenOnRoof.Add(blocksOutsideKindergarten[j]);
-                        }
-                        else
-                        {
-                            blocksOutsideKindergartenNotOnRoof.Add(blocksOutsideKindergarten[j]);
-                        }
+                        normalAreBlocksInside.Add(AreObjectsInsidePlot(plotRegions, blocksNotOnRoof));
+                        normalAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotRegions, blocksOnRoof));
                     }
-
-                    normalAreBlocksInside.Add(AreObjectsInsidePlot(plotRegions, blocksOutsideKindergartenNotOnRoof));
-                    kindergartenAreBlocksInside.Add(AreObjectsInsidePlot(plotRegions, blocksInsideKindergartenNotOnRoof));
-                    normalAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotRegions, blocksOutsideKindergartenOnRoof));
-                    kindergartenAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotRegions, blocksInsideKindergartenOnRoof));
-
                 }
                 //Creating table data
                 for (var i = 0; i < variables.LaylistBlockCount.Length; i++)
                 {
                     normalBlocksModelList.Add(new DataElementModel(normalAreBlocksInside[i].Where(x => x == true).Count(), i, true));
                     normalBlocksModelList.Add(new DataElementModel(normalAreBlocksInside[i].Where(x => x == false).Count(), i, false));
-                    normalBlocksModelList.Add(new DataElementModel(kindergartenAreBlocksInside[i].Where(x => x == true).Count(), i + 2, true));
-                    normalBlocksModelList.Add(new DataElementModel(kindergartenAreBlocksInside[i].Where(x => x == false).Count(), i + 2, false));
                     normalBlocksModelList.Add(new DataElementModel(normalAreBlocksInsideOnRoof[i].Where(x => x == true).Count(), i + 4, true));
                     normalBlocksModelList.Add(new DataElementModel(normalAreBlocksInsideOnRoof[i].Where(x => x == false).Count(), i + 4, false));
-                    normalBlocksModelList.Add(new DataElementModel(kindergartenAreBlocksInsideOnRoof[i].Where(x => x == true).Count(), i + 6, true));
-                    normalBlocksModelList.Add(new DataElementModel(kindergartenAreBlocksInsideOnRoof[i].Where(x => x == false).Count(), i + 6, false));
+                    if (kindergartenBorder != null && kindergartenBorder.Count > 0)
+                    {
+                        normalBlocksModelList.Add(new DataElementModel(kindergartenAreBlocksInside[i].Where(x => x == true).Count(), i + 2, true));
+                        normalBlocksModelList.Add(new DataElementModel(kindergartenAreBlocksInside[i].Where(x => x == false).Count(), i + 2, false));
+                        normalBlocksModelList.Add(new DataElementModel(kindergartenAreBlocksInsideOnRoof[i].Where(x => x == true).Count(), i + 6, true));
+                        normalBlocksModelList.Add(new DataElementModel(kindergartenAreBlocksInsideOnRoof[i].Where(x => x == false).Count(), i + 6, false));
+                    }
                 }
                 //Filling Normal blocks table
                 _dataExport.FillTableWithData(tr, normalBlocksModelList, variables.Tbn, variables.LaylistBlockCount.Length * 4, "0");
@@ -904,16 +921,17 @@ namespace StageProjectScripts.Functions
                 }
                 //Splitting working zone between in and out GPZU
                 //Creating region
-                var workingRegions = CreateRegionsWithHoleSupport(polylinesForAreas[0]);
+                var workingRegions = CreateRegionsWithHoleSupport(polylinesForAreas[0], "благоустройства");
                 plineAreaModelList.AddRange(SplitRegionByInsideOutsideAndCreateDataElement(plotRegions, workingRegions, 0));
 
-                var buildingRegions = CreateRegionsWithHoleSupport(polylinesForAreas[1]);
+                var buildingRegions = CreateRegionsWithHoleSupport(polylinesForAreas[1], "здания");
                 plineAreaModelList.AddRange(SplitRegionByInsideOutsideAndCreateDataElement(plotRegions, buildingRegions, 1));
                 //Splitting Kindergarten between roof and not roof
-                var kindergartenRegions = CreateRegionsWithHoleSupport(polylinesForAreas[2]);
-                var kindergartenRegionOnRoof = (Region)kindergartenRegions[0].Clone();
-                if (kindergartenRegions.Count == 1)
+                if (polylinesForAreas[2].Count == 1)
                 {
+                    var kindergartenRegions = CreateRegionsWithHoleSupport(polylinesForAreas[2], "детского сада");
+                    var kindergartenRegionOnRoof = (Region)kindergartenRegions[0].Clone();
+
                     foreach (var region in buildingRegions)
                     {
                         kindergartenRegions[0].BooleanOperation(BooleanOperationType.BoolSubtract, (Region)region.Clone());
@@ -925,7 +943,7 @@ namespace StageProjectScripts.Functions
 
                     plineAreaModelList.AddRange(SplitRegionByInsideOutsideAndCreateDataElement(plotRegions, new List<Region> { kindergartenRegionOnRoof }, 3));
                 }
-                else if (kindergartenRegions.Count > 1)
+                else if (polylinesForAreas[2].Count > 1)
                 {
                     System.Windows.MessageBox.Show("На слое границы садика больше одной полилинии, что недопустимо", "Error", System.Windows.MessageBoxButton.OK);
                     return;
@@ -987,7 +1005,7 @@ namespace StageProjectScripts.Functions
                 }
                 //separating polylines that are on top on roof
                 var roofBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[1], xRef);
-                var roofRegion = CreateRegionsWithHoleSupport(roofBorders);
+                var roofRegion = CreateRegionsWithHoleSupport(roofBorders, "здания");
                 for (int i = 0; i < polylinesForLines.Length; i++)
                 {
                     polylinesForLinesOnRoof[i] = GetListOfElementsThatAreInsideRegion<Polyline>(roofRegion, polylinesForLines[i]);
@@ -998,23 +1016,26 @@ namespace StageProjectScripts.Functions
                 }
                 //seperating kindergarten part
                 var kindergartenBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[2], xRef);
-                var kindergartenRegion = CreateRegionsWithHoleSupport(kindergartenBorders);
                 List<Polyline>[] polylinesForLinesKindergarten = new List<Polyline>[variables.LaylistPlL.Length];
-                for (int i = 0; i < polylinesForLines.Length; i++)
-                {
-                    polylinesForLinesKindergarten[i] = GetListOfElementsThatAreInsideRegion<Polyline>(kindergartenRegion, polylinesForLines[i]);
-                    foreach (var polyline in polylinesForLinesKindergarten[i])
-                    {
-                        polylinesForLines[i].Remove(polyline);
-                    }
-                }
                 List<Polyline>[] polylinesForLinesKindergartenOnRoof = new List<Polyline>[variables.LaylistPlL.Length];
-                for (int i = 0; i < polylinesForLinesOnRoof.Length; i++)
+                if (kindergartenBorders != null && kindergartenBorders.Count > 0)
                 {
-                    polylinesForLinesKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Polyline>(kindergartenRegion, polylinesForLinesOnRoof[i]);
-                    foreach (var polyline in polylinesForLinesKindergartenOnRoof[i])
+                    var kindergartenRegion = CreateRegionsWithHoleSupport(kindergartenBorders, "детского сада");
+                    for (int i = 0; i < polylinesForLines.Length; i++)
                     {
-                        polylinesForLinesOnRoof[i].Remove(polyline);
+                        polylinesForLinesKindergarten[i] = GetListOfElementsThatAreInsideRegion<Polyline>(kindergartenRegion, polylinesForLines[i]);
+                        foreach (var polyline in polylinesForLinesKindergarten[i])
+                        {
+                            polylinesForLines[i].Remove(polyline);
+                        }
+                    }
+                    for (int i = 0; i < polylinesForLinesOnRoof.Length; i++)
+                    {
+                        polylinesForLinesKindergartenOnRoof[i] = GetListOfElementsThatAreInsideRegion<Polyline>(kindergartenRegion, polylinesForLinesOnRoof[i]);
+                        foreach (var polyline in polylinesForLinesKindergartenOnRoof[i])
+                        {
+                            polylinesForLinesOnRoof[i].Remove(polyline);
+                        }
                     }
                 }
                 //Creating dataelement Models
@@ -1040,18 +1061,21 @@ namespace StageProjectScripts.Functions
             List<DataElementModel> plineLengthModelList = new();
             for (var i = 0; i < variables.LaylistPlL.Length; i++)
             {
-                var plineLengths = polylines[i].Select(x => x.Length / variables.CurbLineCount[i]).ToList();
-                var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotRegions, polylines[i]);
-                for (var j = 0; j < polylines[i].Count; j++)
+                if (polylines[i] != null && polylines[i].Count > 0)
                 {
-                    plineLengthModelList.Add(new DataElementModel(plineLengths[j], i + startingLine, arePlinesInside[j]));
+                    var plineLengths = polylines[i].Select(x => x.Length / variables.CurbLineCount[i]).ToList();
+                    var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotRegions, polylines[i]);
+                    for (var j = 0; j < polylines[i].Count; j++)
+                    {
+                        plineLengthModelList.Add(new DataElementModel(plineLengths[j], i + startingLine, arePlinesInside[j]));
+                    }
                 }
             }
             return plineLengthModelList;
         }
 
         //creating regions from polylines with hole support
-        private List<Region> CreateRegionsWithHoleSupport(List<Polyline> polylines)
+        private List<Region> CreateRegionsWithHoleSupport(List<Polyline> polylines, string text)
         {
             List<Region> workingRegions = new();
             if (polylines.Count == 1)
@@ -1060,7 +1084,7 @@ namespace StageProjectScripts.Functions
             }
             else if (polylines.Count == 0)
             {
-                System.Windows.MessageBox.Show("В файле основы нет границы благоустройства", "Error", System.Windows.MessageBoxButton.OK);
+                System.Windows.MessageBox.Show($"В файле основы нет границы {text}", "Error", System.Windows.MessageBoxButton.OK);
             }
             else
             {
@@ -1248,6 +1272,20 @@ namespace StageProjectScripts.Functions
                         throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
                     }
                 }
+            }
+            if (isFirstPointIn == PointContainment.OnBoundary)
+            {
+                double xCoord = 0;
+                double yCoord = 0;
+                int numberOfPoints = points.Count;
+                for (int i = 0; i < numberOfPoints; i++)
+                {
+                    xCoord += points[i].X / numberOfPoints;
+                    yCoord += points[i].Y / numberOfPoints;
+                }
+                var testPointIn = GetPointContainment(regions, new Point3d(xCoord, yCoord, 0));
+
+                return testPointIn == PointContainment.Inside;
             }
             return isFirstPointIn == PointContainment.Inside;
         }
