@@ -969,13 +969,13 @@ namespace StageProjectScripts.Functions
             }
         }
 
-        private List<DataElementModel> SplitRegionByInsideOutsideAndCreateDataElement(List<Region> regionsToSplitBy, List<Region> workingRegions, int numberInTable)
+        private List<DataElementModel> SplitRegionByInsideOutsideAndCreateDataElement(List<Region> regionsToSplitBy, List<Region> regionsToSplit, int numberInTable)
         {
             List<DataElementModel> dataElementModelList = new();
             //Work with regions to determine what is outside GPZU
             double areaOutside = 0;
             double areaInside = 0;
-            foreach (var workReg in workingRegions)
+            foreach (var workReg in regionsToSplit)
             {
                 var tempReg = (Region)workReg.Clone();
                 areaInside += workReg.Area;

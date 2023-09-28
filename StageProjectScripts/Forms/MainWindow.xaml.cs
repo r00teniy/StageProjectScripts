@@ -5,6 +5,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 
+using Autodesk.AutoCAD.DatabaseServices;
+
+using ProjectScripts.Functions;
+
 using StageProjectScripts.Functions;
 
 namespace StageProjectScripts.Forms
@@ -28,6 +32,7 @@ namespace StageProjectScripts.Forms
             CalculateButton.IsEnabled = false;
             LabelPavement.IsEnabled = false;
             LabelGreenery.IsEnabled = false;
+            ConfigureViewport.IsEnabled = false;
             //Base xRef List
             xRefs = new(_dataImport.GetXRefList());
             plotRef = new(_dataImport.GetXRefList());
@@ -51,6 +56,8 @@ namespace StageProjectScripts.Forms
                 plotsComboBox.SelectedIndex = plots.IndexOf(_variables.SavedData[2]);
                 CalculateButton.IsEnabled = true;
             }
+            viewPortSelectionComboBox.ItemsSource = _variables.ViewPortSetNames;
+            viewPortSelectionComboBox.SelectedIndex = 0;
         }
         private void plotsXRefComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -126,6 +133,28 @@ namespace StageProjectScripts.Forms
             if (baseXRefComboBox.SelectedIndex >= 0)
             {
                 CalculateButton.IsEnabled = true;
+                ConfigureViewport.IsEnabled = true;
+            }
+        }
+
+        private void ConfigureViewport_Click(object sender, RoutedEventArgs e)
+        {
+            if (baseXRefComboBox.SelectedItem != null && plotsXRefComboBox.SelectedItem != null && plotsComboBox.SelectedItem != null)
+            {
+                Hide();
+                var layerSetup = new LayerSetup();
+                var _dataimport = new DataImport();
+                var vp = _dataimport.GetObjectIdOfEntity<Viewport>("Видовой экран");
+                if (vp != null)
+                {
+                    return;
+                }
+                layerSetup.SetViewPortLayersVisibility(_variables, (ObjectId)vp, viewPortSelectionComboBox.SelectedIndex, baseXRefComboBox.SelectedItem.ToString(), plotsXRefComboBox.SelectedItem.ToString(), plotsComboBox.SelectedItem.ToString());
+                Show();
+            }
+            else
+            {
+                MessageBox.Show($"Необходимо выбрать файл основы, границ и номер ГПЗУ", "Ошибка", MessageBoxButton.OK);
             }
         }
     }

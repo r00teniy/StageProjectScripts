@@ -45,7 +45,15 @@ namespace StageProjectScripts
         public string Tbp { get; set; }// = "A2E97"; //Table handle for blocks with params
         //Temporary
         public int[] CurbLineCount { get; set; }// = { 2, 1, 2, 2, 1, 1, 2, 1, 2, 2 };
-
+        //stuff for viewport layer selection
+        public bool[] JustPlotBorders { get; set; }
+        public string[] ViewPortSetNames { get; set; }
+        public string[] LayersToShowInViewPortNormal { get; set; }
+        public string[] LayersToHideInViewPortNormal { get; set; }
+        public string[] LayersToShowInViewPortOsnova { get; set; }
+        public string[] LayersToHideInViewPortOsnova { get; set; }
+        public string[] LayersToShowInViewPortBorders { get; set; }
+        public string[] LayersToHideInViewPortBorders { get; set; }
         public Variables()
         {
         }

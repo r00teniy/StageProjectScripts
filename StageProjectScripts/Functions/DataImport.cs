@@ -328,6 +328,20 @@ internal class DataImport
         }
         return output;
     }
+    public ObjectId? GetObjectIdOfEntity<T>(string type) where T : Entity
+    {
+        Document doc = Application.DocumentManager.MdiActiveDocument;
+        Editor ed = doc.Editor;
+        var options = new PromptEntityOptions($"\nВыберите {type}: ");
+        options.SetRejectMessage($"\nВы выбрали не {type}");
+        options.AddAllowedClass(typeof(T), true);
+        var result = ed.GetEntity(options);
+        if (result.Status == PromptStatus.OK)
+        {
+            return result.ObjectId;
+        }
+        return null;
+    }
     //Functions to check if something is inside polyline
     internal PointContainment CheckIfObjectIsInsidePolyline(Polyline pl, Object obj)
     {
