@@ -23,7 +23,6 @@ internal class DataExport
         BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
         foreach (var pt in pts)
         {
-            LayerCheck(tr, variables.TempLayer, Color.FromColorIndex(ColorMethod.ByAci, variables.TempLayerColor), variables.TempLayerLineWeight, variables.TempLayerPrintable);
             var (ptStart, ptEnd) = pt;
             using (Line acLine = new())
             {

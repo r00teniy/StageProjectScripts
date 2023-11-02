@@ -14,10 +14,12 @@ namespace StageProjectScripts
         public string[] LaylistHatchKindergartenOnRoof { get; set; }
         //Layers for polylines to extract length from
         public string[] LaylistPlL { get; set; }// = { "31_Борт_БР100.30.15", "32_Борт_БР100.20.8", "33_Борт_БР100.45.18", "33_Борт_БР100.60.20", "34_Борт_Металл", "35_Борт_Пластик", "36_Борт_1ГП_100.30.15", "37_Борт_4ГП_100.20.10", "38_Борт_2ГП_100.40.18", "38_Борт_3ГП_100.60.20" };
+        public string[] LaylistPlLOnRoof { get; set; }
         //Layers for polylines to extract area from
         public string[] LaylistPlA { get; set; }// = { "09_Граница_благоустройства", "16_Здание_контур_площадь_застройки" };
         //Layers for blocks
         public string[] LaylistBlockCount { get; set; }// = { "51_Деревья", "52_Кустарники" };
+        public string RoofBorderLayerName { get; set; }
         public string GreeneryMleaderStyleName { get; set; }// = "Озеленение";
         public string GreeneryMleaderBlockName { get; set; }// = "Выноска_озеленение";
         public string[] GreeneryId { get; set; }// = { "1", "2" };
