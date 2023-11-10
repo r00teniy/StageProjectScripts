@@ -58,17 +58,12 @@ namespace StageProjectScripts.Functions
                     }
                     //Creating intersections from hatches
                     var intersections = GetIntersections(tr, btr, variables, hatches);
-                    if (intersections != null)
-                    {
-                        return;
-                    }
                     //Creating intersections from hatches on roof
                     var intersectionsOnRoof = GetIntersections(tr, btr, variables, hatchesOnRoof);
-                    if (intersectionsOnRoof != null)
+                    if (intersectionsOnRoof.Count > 0)
                     {
-                        return;
+                        intersections.AddRange(intersectionsOnRoof);
                     }
-                    intersections.AddRange(intersectionsOnRoof);
                     //selecting created intersection regions
                     if (intersections.Count > 0)
                     {
