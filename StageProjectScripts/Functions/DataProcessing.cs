@@ -340,34 +340,34 @@ namespace StageProjectScripts.Functions
                     var plotRegions = GenerateRegionsFromBorders(tr, variables.PlotLayer, "ГПЗУ", plotNumber, plotXref);
                     if (plotRegions != null)
                     {
-                        plotRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatches, polylines, "ГПЗУ");
-                        plotRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatchesOnRoof, polylinesOnRoof, "ГПЗУ");
+                        plotRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "ГПЗУ");
+                        plotRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "ГПЗУ");
                     }
                     //WorkingZoneBorder
                     plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[0], "Благоустройства");
                     if (plotRegions != null)
                     {
-                        workRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatches, polylines, "Благоустройства");
-                        workRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatchesOnRoof, polylinesOnRoof, "Благоустройства");
+                        workRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Благоустройства");
+                        workRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "Благоустройства");
                     }
                     //BuildingBorder
                     plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[1], "Зданий");
                     if (plotRegions != null)
                     {
-                        buildingRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatches, polylines, "Зданий");
+                        buildingRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Зданий");
                     }
                     //RoofBorder
                     plotRegions = GenerateRegionsFromBorders(tr, variables.RoofBorderLayerName, "Крыши");
                     if (plotRegions != null)
                     {
-                        buildingRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatchesOnRoof, polylinesOnRoof, "Крыши");
+                        buildingRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "Крыши");
                     }
                     //KindergartenBorder
                     plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[2], "Детского сада");
                     if (plotRegions != null)
                     {
-                        kindergartenRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatches, polylines, "Детского сада");
-                        kindergartenRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, tr, plotRegions, hatchesOnRoof, polylinesOnRoof, "Детского сада");
+                        kindergartenRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Детского сада");
+                        kindergartenRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "Детского сада");
                     }
                     //results
                     List<(Point3d, Point3d)> linesToDraw = new();
@@ -479,7 +479,7 @@ namespace StageProjectScripts.Functions
                 return null;
             }
         }
-        private (List<(Point3d, Point3d)>, List<Region>) CheckHatchesAndPolylinesForIntersectionsWithRegions(Variables variables, Transaction tr, List<Region> plotRegions, List<Hatch>[] hatches, List<Polyline>[] polylinesForLines, string borderName)
+        private (List<(Point3d, Point3d)>, List<Region>) CheckHatchesAndPolylinesForIntersectionsWithRegions(Variables variables, List<Region> plotRegions, List<Hatch>[] hatches, List<Polyline>[] polylinesForLines, string borderName)
         {
             List<(Point3d, Point3d)> errorLinePoints = new();
             List<Region> errorRegions = new();
@@ -491,13 +491,21 @@ namespace StageProjectScripts.Functions
                 foreach (var r in reg)
                 {
                     var rOriginal = (Region)r.Clone();
-                    foreach (var plReg in plotRegions)
+                    try
                     {
-                        r.BooleanOperation(BooleanOperationType.BoolSubtract, (Region)plReg.Clone());
+                        foreach (var plReg in plotRegions)
+                        {
+                            r.BooleanOperation(BooleanOperationType.BoolSubtract, (Region)plReg.Clone());
+                        }
+                        if (r.Area != 0 && r.Area != rOriginal.Area)
+                        {
+                            errorRegions.Add(r);
+                        }
                     }
-                    if (r.Area != 0 && r.Area != rOriginal.Area)
+                    catch (System.Exception)
                     {
-                        errorRegions.Add(r);
+                        errorRegions.Add(rOriginal);
+                        System.Windows.MessageBox.Show($"При проверке пересечений с границей {borderName} была получена ошибка при попытке проверки штриховок на слое {variables.LaylistHatch[i]}, штриховка имеет площадь {rOriginal.Area}. Штриховка выделена полностью зелёным цветом, просьба найти и перестроить.", "Сообщение", System.Windows.MessageBoxButton.OK);
                     }
                 }
             }
