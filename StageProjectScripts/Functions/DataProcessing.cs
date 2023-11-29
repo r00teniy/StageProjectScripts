@@ -326,7 +326,9 @@ namespace StageProjectScripts.Functions
                     List<Hatch>[] hatches = GetHatchesToCheck(variables, tr);
                     List<Hatch>[] hatchesOnRoof = GetHatchesToCheckOnRoof(variables, tr);
                     List<Polyline>[] polylines = GetAllPolylinesToCheck(variables, tr);
+                    FlattenPolylines(ref polylines);
                     List<Polyline>[] polylinesOnRoof = GetAllPolylinesToCheckOnRoof(variables, tr);
+                    FlattenPolylines(ref polylinesOnRoof);
                     //Checking elements with every border
                     (List<(Point3d, Point3d)>, List<Region>) plotRegionResult = new(new List<(Point3d, Point3d)>(), new List<Region>());
                     (List<(Point3d, Point3d)>, List<Region>) plotRegionResultRoof = new(new List<(Point3d, Point3d)>(), new List<Region>());
@@ -337,33 +339,69 @@ namespace StageProjectScripts.Functions
                     (List<(Point3d, Point3d)>, List<Region>) kindergartenRegionResult = new(new List<(Point3d, Point3d)>(), new List<Region>());
                     (List<(Point3d, Point3d)>, List<Region>) kindergartenRegionResultRoof = new(new List<(Point3d, Point3d)>(), new List<Region>());
                     //Plotborder
-                    var plotRegions = GenerateRegionsFromBorders(tr, variables.PlotLayer, "ГПЗУ", plotNumber, plotXref);
+                    List<Region> plotRegions = null;
+                    try
+                    {
+                        plotRegions = GenerateRegionsFromBorders(tr, variables.PlotLayer, "ГПЗУ", plotNumber, plotXref);
+                    }
+                    catch (System.Exception)
+                    {
+                        System.Windows.MessageBox.Show("Проблема при создании региона из участка ГПЗУ, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    }
                     if (plotRegions != null)
                     {
                         plotRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "ГПЗУ");
                         plotRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "ГПЗУ");
                     }
                     //WorkingZoneBorder
-                    plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[0], "Благоустройства");
+                    try
+                    {
+                        plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[0], "Благоустройства");
+                    }
+                    catch (System.Exception)
+                    {
+                        System.Windows.MessageBox.Show("Проблема при создании региона из границы благоустройства, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    }
                     if (plotRegions != null)
                     {
                         workRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Благоустройства");
                         workRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "Благоустройства");
                     }
                     //BuildingBorder
-                    plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[1], "Зданий");
+                    try
+                    {
+                        plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[1], "Зданий");
+                    }
+                    catch (System.Exception)
+                    {
+                        System.Windows.MessageBox.Show("Проблема при создании региона из контура здания, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    }
                     if (plotRegions != null)
                     {
                         buildingRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Зданий");
                     }
                     //RoofBorder
-                    plotRegions = GenerateRegionsFromBorders(tr, variables.RoofBorderLayerName, "Крыши");
+                    try
+                    {
+                        plotRegions = GenerateRegionsFromBorders(tr, variables.RoofBorderLayerName, "Крыши");
+                    }
+                    catch (System.Exception)
+                    {
+                        System.Windows.MessageBox.Show("Проблема при создании региона из контура крыши, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    }
                     if (plotRegions != null)
                     {
                         buildingRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "Крыши");
                     }
                     //KindergartenBorder
-                    plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[2], "Детского сада");
+                    try
+                    {
+                        plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[2], "Детского сада");
+                    }
+                    catch (System.Exception)
+                    {
+                        System.Windows.MessageBox.Show("Проблема при создании региона из границы детсколго сада, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    }
                     if (plotRegions != null)
                     {
                         kindergartenRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Детского сада");
@@ -456,7 +494,23 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
-
+        private static void FlattenPolylines(ref List<Polyline>[] polylines)
+        {
+            foreach (var pls in polylines)
+            {
+                if (pls != null)
+                {
+                    foreach (var pl in pls)
+                    {
+                        if (pl.Elevation != 0)
+                        {
+                            pl.UpgradeOpen();
+                            pl.Elevation = 0;
+                        }
+                    }
+                }
+            }
+        }
         private List<Region> GenerateRegionsFromBorders(Transaction tr, string layer, string borderName, string plotNumber = null, string plotXref = null)
         {
             var borderLayer = plotNumber != null ? layer + plotNumber.Replace(':', '_') : layer;
@@ -608,7 +662,11 @@ namespace StageProjectScripts.Functions
                         }
                     }
                     //creating MLeaders
-                    _dataExport.CreateMleaderWithText(tr, texts, pts, variables.PLabelLayer);
+                    var result = _dataExport.CreateMleaderWithText(tr, texts, pts, variables.PLabelLayer);
+                    if (result != "ok")
+                    {
+                        System.Windows.MessageBox.Show(result, "Error", System.Windows.MessageBoxButton.OK);
+                    }
                     tr.Commit();
                 }
             }
@@ -623,7 +681,11 @@ namespace StageProjectScripts.Functions
                     {
                         var greeneryBlocks = GroupBlocksByDistance(_dataImport.GetBlocksPosition(tr, variables.LaylistBlockCount[i]), variables.GreeneryGroupingDistance[i]);
                         // TODO: Add better grouping mechanism
-                        _dataExport.CreateMleaderWithBlockForGroupOfobjects(tr, greeneryBlocks, variables.GreeneryId[i], variables.GreeneryMleaderStyleName, variables.OLabelLayer, variables.GreeneryMleaderBlockName, variables.GreeneryAttr);
+                        var result = _dataExport.CreateMleaderWithBlockForGroupOfobjects(tr, greeneryBlocks, variables.GreeneryId[i], variables.GreeneryMleaderStyleName, variables.OLabelLayer, variables.GreeneryMleaderBlockName, variables.GreeneryAttr);
+                        if (result != "ok")
+                        {
+                            System.Windows.MessageBox.Show(result, "Error", System.Windows.MessageBoxButton.OK);
+                        }
                     }
                     tr.Commit();
                 }
@@ -1124,11 +1186,13 @@ namespace StageProjectScripts.Functions
                 {
                     polylinesForLines[i] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlL[i], xRef);
                 }
+                FlattenPolylines(ref polylinesForLines);
                 List<Polyline>[] polylinesForLinesOnRoof = new List<Polyline>[variables.LaylistPlLOnRoof.Length];
                 for (var i = 0; i < variables.LaylistPlLOnRoof.Length; i++)
                 {
                     polylinesForLinesOnRoof[i] = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlLOnRoof[i], xRef);
                 }
+                FlattenPolylines(ref polylinesForLinesOnRoof);
                 //seperating kindergarten part
                 var kindergartenBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[2], xRef);
                 List<Polyline>[] polylinesForLinesKindergarten = new List<Polyline>[variables.LaylistPlL.Length];

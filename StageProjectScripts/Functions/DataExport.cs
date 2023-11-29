@@ -65,13 +65,18 @@ internal class DataExport
         return false;
     }
     //Creating Mleader with text
-    internal void CreateMleaderWithText(Transaction tr, List<string> texts, List<Point3d> pts, string layer)
+    internal string CreateMleaderWithText(Transaction tr, List<string> texts, List<Point3d> pts, string layer)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
         var bT = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
         BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bT[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
         //creating Mleaders
+        LayerTable lt = tr.GetObject(db.LayerTableId, OpenMode.ForRead) as LayerTable;
+        if (!lt.Has(layer))
+        {
+            return $"В файле нет слоя {layer} для размещения выносок, его необходимо создать или скопировать из шаблона.";
+        }
         for (int i = 0; i < texts.Count; i++)
         {
             //createing Mleader
@@ -94,7 +99,7 @@ internal class DataExport
             btr.AppendEntity(leader);
             tr.AddNewlyCreatedDBObject(leader, true);
         }
-
+        return "ok";
     }
     //Function to clear temporary geometry
     public void ClearTemp(Variables variables)
@@ -140,7 +145,7 @@ internal class DataExport
             tr.AddNewlyCreatedDBObject(newLayer, true);
         }
     }
-    internal void CreateMleaderWithBlockForGroupOfobjects(Transaction tr, List<List<Point3d>> pointList, string id, string style, string layer, string blockName, string[] attr)
+    internal string CreateMleaderWithBlockForGroupOfobjects(Transaction tr, List<List<Point3d>> pointList, string id, string style, string layer, string blockName, string[] attr)
     {
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = doc.Database;
@@ -151,11 +156,24 @@ internal class DataExport
         Matrix3d UCS = ed.CurrentUserCoordinateSystem;
         CoordinateSystem3d cs = UCS.CoordinateSystem3d;
         double rotAngle = cs.Xaxis.AngleOnPlane(new Plane(Point3d.Origin, Vector3d.ZAxis));
+        LayerTable lt = tr.GetObject(db.LayerTableId, OpenMode.ForRead) as LayerTable;
+        if (!lt.Has(layer))
+        {
+            return $"В файле нет слоя {layer} для размещения выносок, его необходимо создать или скопировать из шаблона.";
+        }
+        DBDictionary mlStyles = tr.GetObject(db.MLeaderStyleDictionaryId, OpenMode.ForRead) as DBDictionary;
+        ObjectId mlStyleId;
+        try
+        {
+            mlStyleId = mlStyles.GetAt(style);
+        }
+        catch (Exception)
+        {
+            return $"В файле нет стиля выноски {style}, его необходимо скопировать из шаблона.";
+        }
         //Creating Mleaders for each group
         foreach (var group in pointList)
         {
-            DBDictionary mlStyles = tr.GetObject(db.MLeaderStyleDictionaryId, OpenMode.ForRead) as DBDictionary;
-            ObjectId mlStyleId = mlStyles.GetAt(style);
             var leader = new MLeader();
             leader.SetDatabaseDefaults();
             leader.MLeaderStyle = mlStyleId;
@@ -202,6 +220,7 @@ internal class DataExport
             btr.AppendEntity(leader);
             tr.AddNewlyCreatedDBObject(leader, true);
         }
+        return "ok";
     }
     internal void FillTableWithData(Transaction tr, List<DataElementModel> hatches, string tableHandle, int numberOfLines, string format)
     {
