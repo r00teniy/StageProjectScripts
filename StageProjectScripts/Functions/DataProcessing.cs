@@ -60,12 +60,12 @@ namespace StageProjectScripts.Functions
                     var intersections = GetIntersections(tr, btr, variables, hatches);
                     //Creating intersections from hatches on roof
                     var intersectionsOnRoof = GetIntersections(tr, btr, variables, hatchesOnRoof);
-                    if (intersectionsOnRoof.Count > 0)
+                    if (intersectionsOnRoof != null && intersectionsOnRoof.Count > 0)
                     {
                         intersections.AddRange(intersectionsOnRoof);
                     }
                     //selecting created intersection regions
-                    if (intersections.Count > 0)
+                    if (intersections != null && intersections.Count > 0)
                     {
                         ed.SetImpliedSelection(intersections.ToArray());
                         ed.SelectImplied();
@@ -110,7 +110,7 @@ namespace StageProjectScripts.Functions
             {
                 try
                 {
-                    // can't instersec hatches, get polyline and intersect them or just get curves for each loop and intersect them??
+                    // can't intersec hatches, get polyline and intersect them or just get curves for each loop and intersect them??
                     Plane plane = hatches[i].GetPlane();
                     Region region = null;
                     if (hatches[i].GetLoopAt(0).LoopType == HatchLoopTypes.External)
@@ -812,7 +812,7 @@ namespace StageProjectScripts.Functions
                 //Getting data for Hatch table
                 var hatchModelList = GetHatchData(variables, tr, xRef, plotRegions);
                 //Filling hatch table
-                int tableLength = variables.LaylistHatch.Length + variables.LaylistHatchRoof.Length + variables.LaylistHatchKindergarten.Length + variables.LaylistHatchKindergartenOnRoof.Length + 14;
+                int tableLength = variables.LaylistHatch.Length + variables.LaylistHatchRoof.Length + variables.LaylistHatchKindergarten.Length + variables.LaylistHatchKindergartenOnRoof.Length + variables.LaylistHatchAdditional.Length + 14;
                 _dataExport.FillTableWithData(tr, hatchModelList, variables.Th, tableLength, "0.##");
             }
             catch (System.Exception ex)
@@ -829,6 +829,11 @@ namespace StageProjectScripts.Functions
             for (var i = 0; i < variables.LaylistHatch.Length; i++)
             {
                 hatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i], xRef);
+            }
+            List<Hatch>[] additionalHatches = new List<Hatch>[variables.LaylistHatchAdditional.Length];
+            for (var i = 0; i < variables.LaylistHatchAdditional.Length; i++)
+            {
+                additionalHatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchAdditional[i], xRef);
             }
             List<Hatch>[] roofHatches = new List<Hatch>[variables.LaylistHatchRoof.Length];
             for (var i = 0; i < variables.LaylistHatchRoof.Length; i++)
@@ -908,6 +913,8 @@ namespace StageProjectScripts.Functions
             hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, kindergartenHatchesOnRoof, currentLine));
             currentLine += kindergartenHatchesOnRoof.Length;
             hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, greeneryHatchesInKindergartenOnRoof, currentLine));
+            currentLine += greeneryHatchesInKindergartenOnRoof.Length;
+            hatchModelList.AddRange(CreateDataElementsHatches(tr, plotRegions, additionalHatches, currentLine));
             return hatchModelList;
         }
 

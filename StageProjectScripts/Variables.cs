@@ -56,6 +56,7 @@ namespace StageProjectScripts
         public string[] LayersToHideInViewPortOsnova { get; set; }
         public string[] LayersToShowInViewPortBorders { get; set; }
         public string[] LayersToHideInViewPortBorders { get; set; }
+        public string[] LaylistHatchAdditional { get; set; }
         public Variables()
         {
         }
