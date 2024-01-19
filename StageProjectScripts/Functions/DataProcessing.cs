@@ -645,30 +645,62 @@ namespace StageProjectScripts.Functions
             {
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    List<Hatch>[] hatches = new List<Hatch>[variables.LaylistHatch.Length];
-                    for (var i = 0; i < variables.PLabelValues.Length; i++)
+                    try
                     {
-                        hatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i], xRef);
-                    }
-                    List<string> texts = new();
-                    List<Point3d> pts = new();
-                    //filling lists with data
-                    for (var i = 0; i < variables.PLabelValues.Length; i++)
-                    {
-                        foreach (var hat in hatches[i])
+                        List<Hatch>[] hatches = new List<Hatch>[variables.PLabelValues.Length];
+                        int currentNumber = 0;
+                        for (var i = 0; i < variables.PlabelNumber; i++)
                         {
-                            //getting center of each hatch
-                            Extents3d extents = hat.GeometricExtents;
-                            pts.Add(extents.MinPoint + (extents.MaxPoint - extents.MinPoint) / 2.0);
-                            //adding label texts based on layer
-                            texts.Add(variables.PLabelValues[i]);
+                            hatches[i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[i], xRef);
+                        }
+                        currentNumber += variables.PlabelNumber;
+                        hatches[currentNumber] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatch[13], xRef);
+                        currentNumber++;
+                        for (var i = 0; i < variables.PlabelRoofNumber; i++)
+                        {
+                            hatches[currentNumber + i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchRoof[i], xRef);
+                        }
+                        currentNumber += variables.PlabelRoofNumber;
+                        hatches[currentNumber] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchRoof[11], xRef);
+                        currentNumber++;
+                        for (var i = 0; i < variables.LaylistHatchKindergarten.Length; i++)
+                        {
+                            hatches[currentNumber + i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchKindergarten[i], xRef);
+                        }
+                        currentNumber += variables.LaylistHatchKindergarten.Length;
+                        for (var i = 0; i < variables.LaylistHatchKindergartenOnRoof.Length; i++)
+                        {
+                            hatches[currentNumber + i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchKindergartenOnRoof[i], xRef);
+                        }
+                        currentNumber += variables.LaylistHatchKindergartenOnRoof.Length;
+                        for (var i = 0; i < variables.LaylistHatchAdditional.Length; i++)
+                        {
+                            hatches[currentNumber + i] = _dataImport.GetAllElementsOfTypeOnLayer<Hatch>(tr, variables.LaylistHatchAdditional[i], xRef);
+                        }
+                        List<string> texts = new();
+                        List<Point3d> pts = new();
+                        //filling lists with data
+                        for (var i = 0; i < variables.PLabelValues.Length; i++)
+                        {
+                            foreach (var hat in hatches[i])
+                            {
+                                //getting center of each hatch
+                                Extents3d extents = hat.GeometricExtents;
+                                pts.Add(extents.MinPoint + (extents.MaxPoint - extents.MinPoint) / 2.0);
+                                //adding label texts based on layer
+                                texts.Add(variables.PLabelValues[i]);
+                            }
+                        }
+                        //creating MLeaders
+                        var result = _dataExport.CreateMleaderWithText(tr, texts, pts, variables.PLabelLayer);
+                        if (result != "ok")
+                        {
+                            System.Windows.MessageBox.Show(result, "Error", System.Windows.MessageBoxButton.OK);
                         }
                     }
-                    //creating MLeaders
-                    var result = _dataExport.CreateMleaderWithText(tr, texts, pts, variables.PLabelLayer);
-                    if (result != "ok")
+                    catch (System.Exception e)
                     {
-                        System.Windows.MessageBox.Show(result, "Error", System.Windows.MessageBoxButton.OK);
+                        System.Windows.MessageBox.Show(e.Message, "Error", System.Windows.MessageBoxButton.OK);
                     }
                     tr.Commit();
                 }

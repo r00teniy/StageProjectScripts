@@ -57,6 +57,8 @@ namespace StageProjectScripts
         public string[] LayersToShowInViewPortBorders { get; set; }
         public string[] LayersToHideInViewPortBorders { get; set; }
         public string[] LaylistHatchAdditional { get; set; }
+        public int PlabelNumber { get; set; }
+        public int PlabelRoofNumber { get; set; }
         public Variables()
         {
         }
