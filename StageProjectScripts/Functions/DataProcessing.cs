@@ -1439,11 +1439,11 @@ namespace StageProjectScripts.Functions
             {
                 return PointContainment.Inside;
             }
-            if (resultsByRegion.Where(x => x == PointContainment.Outside).Count() > 0)
+            if (resultsByRegion.Where(x => x == PointContainment.OnBoundary).Count() > 0)
             {
-                return PointContainment.Outside;
+                return PointContainment.OnBoundary;
             }
-            return PointContainment.OnBoundary;
+            return PointContainment.Outside;
         }
         //Getting hatch border or polyline points to check if it is inside plot or not
         private List<Point3d> GetPointsFromObject<T>(T obj)
@@ -1476,60 +1476,89 @@ namespace StageProjectScripts.Functions
             throw new System.Exception("This method works with BlockReference, Polyline or Hatch only.");
         }
         //Checking if group of points is inside/on the polyline
-        private bool ArePointsInsidePolyline(List<Point3d> points, List<Region> regions)
+        private bool ArePointsInsidePolyline(List<Point3d> points, List<Region> regions, bool isPolyline = false)
         {
-            var isFirstPointIn = GetPointContainment(regions, points[0]);
-            for (int i = 1; i < points.Count; i++)
+            List<PointContainment> results = new();
+            foreach (var pt in points)
             {
-                var isThisPointIn = GetPointContainment(regions, points[i]);
-                if (isThisPointIn != isFirstPointIn)
+                results.Add(GetPointContainment(regions, pt));
+            }
+            if (results.Where(x => x == PointContainment.Inside).Count() > 0)
+            {
+                if (results.Where(x => x == PointContainment.Outside).Count() > 0)
                 {
-                    if (isFirstPointIn == PointContainment.OnBoundary)
-                    {
-                        isFirstPointIn = isThisPointIn;
-                    }
-                    else if (isThisPointIn != PointContainment.OnBoundary)
-                    {
-                        throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
-                    }
+                    throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
+                }
+                else
+                {
+                    return true;
                 }
             }
-            if (isFirstPointIn == PointContainment.OnBoundary)
+            else if (results.Where(x => x == PointContainment.Outside).Count() > 0)
             {
-                double xCoord = 0;
-                double yCoord = 0;
-                int numberOfPoints = points.Count;
-                for (int i = 0; i < numberOfPoints; i++)
+                if (results.Where(x => x == PointContainment.Inside).Count() > 0)
                 {
-                    xCoord += points[i].X / numberOfPoints;
-                    yCoord += points[i].Y / numberOfPoints;
+                    throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
                 }
-                var testPointIn = GetPointContainment(regions, new Point3d(xCoord, yCoord, 0));
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                if (isPolyline)
+                {
+                    return true;
+                }
+                else
+                {
+                    double xCoord = 0;
+                    double yCoord = 0;
+                    int numberOfPoints = points.Count;
+                    for (int i = 0; i < numberOfPoints; i++)
+                    {
+                        xCoord += points[i].X / numberOfPoints;
+                        yCoord += points[i].Y / numberOfPoints;
+                    }
+                    var testPointIn = GetPointContainment(regions, new Point3d(xCoord, yCoord, 0));
 
-                return testPointIn == PointContainment.Inside;
+                    return testPointIn == PointContainment.Inside;
+                }
             }
-            return isFirstPointIn == PointContainment.Inside;
         }
         //Getting points that are on other side of plotBorder
         private (Point3d, Point3d)? ArePointsOnBothSidesOfBorder(List<Point3d> points, List<Region> regions)
         {
-            var isFirstPointIn = GetPointContainment(regions, points[0]);
-            for (int i = 1; i < points.Count; i++)
+            List<PointContainment> results = new();
+            foreach (var pt in points)
             {
-                var isThisPointIn = GetPointContainment(regions, points[i]);
-                if (isThisPointIn != isFirstPointIn)
+                results.Add(GetPointContainment(regions, pt));
+            }
+            if (results.Where(x => x == PointContainment.Outside).Count() > 0)
+            {
+                if (results.Where(x => x == PointContainment.Inside).Count() > 0)
                 {
-                    if (isFirstPointIn == PointContainment.OnBoundary)
+                    PointContainment? sideFound = null;
+                    for (int i = 1; i < results.Count; i++)
                     {
-                        isFirstPointIn = isThisPointIn;
+                        if (sideFound != null && results[i] != PointContainment.OnBoundary && results[i] != sideFound)
+                        {
+                            return (points[i], points[i - 1]);
+                        }
+                        if (sideFound == null && results[i] != PointContainment.OnBoundary)
+                        {
+                            sideFound = results[i];
+                        }
                     }
-                    else if (isThisPointIn != PointContainment.OnBoundary)
-                    {
-                        return (points[i], points[i - 1]);
-                    }
+                }
+                else
+                {
+                    return null;
                 }
             }
             return null;
+
         }
         //Function to check if hatch/polyline/blockreference is inside plot (can have 2+ borders)
         private List<bool> AreObjectsInsidePlot<T>(List<Region> plotRegions, List<T> objects)
@@ -1545,6 +1574,13 @@ namespace StageProjectScripts.Functions
                 if (item is Point3d point)
                 {
                     if (ArePointsInsidePolyline(new List<Point3d>() { point }, plotRegions))
+                    {
+                        tempResult = true;
+                    }
+                }
+                else if (item is Polyline)
+                {
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions, true))
                     {
                         tempResult = true;
                     }
