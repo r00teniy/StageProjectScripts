@@ -1539,17 +1539,25 @@ namespace StageProjectScripts.Functions
             {
                 if (results.Where(x => x == PointContainment.Inside).Count() > 0)
                 {
-                    PointContainment? sideFound = null;
-                    for (int i = 1; i < results.Count; i++)
+                    if (points.Count == 2)
                     {
-                        if (sideFound != null && results[i] != PointContainment.OnBoundary && results[i] != sideFound)
+                        return (points[0], points[1]);
+                    }
+                    else
+                    {
+                        PointContainment? sideFound = null;
+                        for (int i = 1; i < results.Count; i++)
                         {
-                            return (points[i], points[i - 1]);
+                            if (sideFound != null && results[i] != PointContainment.OnBoundary && results[i] != sideFound)
+                            {
+                                return (points[i], points[i - 1]);
+                            }
+                            if (sideFound == null && results[i] != PointContainment.OnBoundary)
+                            {
+                                sideFound = results[i];
+                            }
                         }
-                        if (sideFound == null && results[i] != PointContainment.OnBoundary)
-                        {
-                            sideFound = results[i];
-                        }
+                        return (points[results.Count - 1], points[results.Count]);
                     }
                 }
                 else
