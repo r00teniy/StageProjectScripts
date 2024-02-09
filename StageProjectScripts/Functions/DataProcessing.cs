@@ -1546,7 +1546,7 @@ namespace StageProjectScripts.Functions
                     else
                     {
                         PointContainment? sideFound = null;
-                        for (int i = 1; i < results.Count; i++)
+                        for (int i = 0; i < results.Count; i++)
                         {
                             if (sideFound != null && results[i] != PointContainment.OnBoundary && results[i] != sideFound)
                             {
@@ -1557,7 +1557,7 @@ namespace StageProjectScripts.Functions
                                 sideFound = results[i];
                             }
                         }
-                        return (points[results.Count - 1], points[results.Count]);
+                        return (points[results.Count - 2], points[results.Count - 1]);
                     }
                 }
                 else
