@@ -1314,7 +1314,7 @@ namespace StageProjectScripts.Functions
                 for (int i = 0; i < polylines.Count; i++)
                 {
                     isInsideAnother.Add(new List<bool>());
-                    isInsideAnother[i] = AreObjectsInsidePlot(polylines[i], polylines);
+                    isInsideAnother[i] = AreObjectsInsidePlot(polylines[i], polylines, false);
                     isInsideAnother[i][i] = false;
                 }
                 Region[] baseRegions = new Region[isInsideAnother.Count];
@@ -1364,9 +1364,22 @@ namespace StageProjectScripts.Functions
                                 baseRegions[i].BooleanOperation(BooleanOperationType.BoolSubtract, item);
                             }
                         }
-                        workingRegions.Add(baseRegions[i]);
-                    }
 
+                        if (baseRegions[i].Area != 0)
+                        {
+                            workingRegions.Add(baseRegions[i]);
+                        }
+                        else
+                        {
+                            /*
+                            //Ideally we are throwing exeption and selecting polyline afterwards, but currently this method is used a lot
+                            System.Exception e = new();
+                            e.Data.Add("pl", polylines[i]);
+                            throw e;
+                            */
+                            System.Windows.MessageBox.Show($"В файле дублируется одна из границ, необходимо исключить дублирующую границу", "Error", System.Windows.MessageBoxButton.OK);
+                        }
+                    }
                 }
             }
             return workingRegions;
@@ -1476,7 +1489,7 @@ namespace StageProjectScripts.Functions
             throw new System.Exception("This method works with BlockReference, Polyline or Hatch only.");
         }
         //Checking if group of points is inside/on the polyline
-        private bool ArePointsInsidePolyline(List<Point3d> points, List<Region> regions, bool isPolyline = false)
+        private bool ArePointsInsidePolyline(List<Point3d> points, List<Region> regions, bool isPolyline = false, bool checkForIntersections = false)
         {
             List<PointContainment> results = new();
             foreach (var pt in points)
@@ -1487,7 +1500,14 @@ namespace StageProjectScripts.Functions
             {
                 if (results.Where(x => x == PointContainment.Outside).Count() > 0)
                 {
-                    throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
+                    if (checkForIntersections)
+                    {
+                        throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
+                    }
+                    else
+                    {
+                        return (results.Where(x => x == PointContainment.Inside).Count() - results.Where(x => x == PointContainment.Outside).Count()) > 0;
+                    }
                 }
                 else
                 {
@@ -1496,14 +1516,7 @@ namespace StageProjectScripts.Functions
             }
             else if (results.Where(x => x == PointContainment.Outside).Count() > 0)
             {
-                if (results.Where(x => x == PointContainment.Inside).Count() > 0)
-                {
-                    throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
-                }
-                else
-                {
-                    return false;
-                }
+                return false;
             }
             else
             {
@@ -1569,7 +1582,7 @@ namespace StageProjectScripts.Functions
 
         }
         //Function to check if hatch/polyline/blockreference is inside plot (can have 2+ borders)
-        private List<bool> AreObjectsInsidePlot<T>(List<Region> plotRegions, List<T> objects)
+        private List<bool> AreObjectsInsidePlot<T>(List<Region> plotRegions, List<T> objects, bool checkForIntersections = true)
         {
             if (objects == null)
             {
@@ -1588,14 +1601,14 @@ namespace StageProjectScripts.Functions
                 }
                 else if (item is Polyline)
                 {
-                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions, true))
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions, true, checkForIntersections))
                     {
                         tempResult = true;
                     }
                 }
                 else
                 {
-                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions))
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions, false, checkForIntersections))
                     {
                         tempResult = true;
                     }
@@ -1604,7 +1617,7 @@ namespace StageProjectScripts.Functions
             }
             return results;
         }
-        private List<bool> AreObjectsInsidePlot<T>(Polyline plot, List<T> objects)
+        private List<bool> AreObjectsInsidePlot<T>(Polyline plot, List<T> objects, bool checkForIntersections)
         {
             if (objects == null)
             {
@@ -1623,9 +1636,16 @@ namespace StageProjectScripts.Functions
                         tempResult = true;
                     }
                 }
+                else if (item is Polyline)
+                {
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions, true, checkForIntersections))
+                    {
+                        tempResult = true;
+                    }
+                }
                 else
                 {
-                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions))
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions, false))
                     {
                         tempResult = true;
                     }
