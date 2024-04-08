@@ -10,7 +10,13 @@ namespace StageProjectScripts
     {
         void IExtensionApplication.Initialize()
         {
-            Application.DocumentManager.MdiActiveDocument.Editor.WriteMessage("Program loaded \n");
+            var doc = Application.DocumentManager.MdiActiveDocument;
+            if (doc != null)
+            {
+                SystemObjects.DynamicLinker.LoadModule(
+                    "AcMPolygonObj" + Application.Version.Major + ".dbx", false, false);
+                doc.Editor.WriteMessage("Program loaded \n");
+            }
         }
         void IExtensionApplication.Terminate()
         {

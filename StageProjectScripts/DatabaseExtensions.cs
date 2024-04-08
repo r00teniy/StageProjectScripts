@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 
+using Autodesk.AutoCAD.Geometry;
+
 namespace Autodesk.AutoCAD.DatabaseServices
 {
     /// <summary>
@@ -54,6 +56,15 @@ namespace Autodesk.AutoCAD.DatabaseServices
             else
                 custProps.Add(key, value);
             db.SummaryInfo = infoBuilder.ToDatabaseSummaryInfo();
+        }
+        public static bool IsPointInside(this Polyline pline, Point3d point)
+        {
+            double tolerance = Tolerance.Global.EqualPoint;
+            using (MPolygon mpg = new MPolygon())
+            {
+                mpg.AppendLoopFromBoundary(pline, true, tolerance);
+                return mpg.IsPointInsideMPolygon(point, tolerance).Count == 1;
+            }
         }
     }
 }

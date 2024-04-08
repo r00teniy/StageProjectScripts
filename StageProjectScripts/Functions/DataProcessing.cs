@@ -24,6 +24,7 @@ namespace StageProjectScripts.Functions
         Document doc = Application.DocumentManager.MdiActiveDocument;
         Database db = Application.DocumentManager.MdiActiveDocument.Database;
         Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
+        double tolerance = 0.01;
         public DataProcessing()
         {
             _dataImport = new DataImport();
@@ -343,72 +344,79 @@ namespace StageProjectScripts.Functions
                     (List<(Point3d, Point3d)>, List<Region>) kindergartenRegionResultRoof = new(new List<(Point3d, Point3d)>(), new List<Region>());
                     //Plotborder
                     List<Region> plotRegions = null;
+                    MPolygon plotMPolygon = null;
                     try
                     {
                         plotRegions = GenerateRegionsFromBorders(tr, variables.PlotLayer, "ГПЗУ", plotNumber, plotXref);
+                        plotMPolygon = GenerateMPolygonFromBorders(tr, variables.PlotLayer, "ГПЗУ", plotNumber, plotXref);
                     }
                     catch (System.Exception)
                     {
                         System.Windows.MessageBox.Show("Проблема при создании региона из участка ГПЗУ, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
                     }
-                    if (plotRegions != null)
+                    if (plotRegions != null && plotMPolygon != null)
                     {
-                        plotRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "ГПЗУ");
-                        plotRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "ГПЗУ");
+                        plotRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatches, polylines, "ГПЗУ");
+                        plotRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatchesOnRoof, polylinesOnRoof, "ГПЗУ");
                     }
                     //WorkingZoneBorder
                     try
                     {
                         plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[0], "Благоустройства");
+                        plotMPolygon = GenerateMPolygonFromBorders(tr, variables.LaylistPlA[0], "Благоустройства");
                     }
                     catch (System.Exception)
                     {
                         System.Windows.MessageBox.Show("Проблема при создании региона из границы благоустройства, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
                     }
-                    if (plotRegions != null)
+                    if (plotRegions != null && plotMPolygon != null)
                     {
-                        workRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Благоустройства");
-                        workRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "Благоустройства");
+                        workRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatches, polylines, "Благоустройства");
+                        workRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatchesOnRoof, polylinesOnRoof, "Благоустройства");
                     }
                     //BuildingBorder
                     try
                     {
                         plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[1], "Зданий");
+                        plotMPolygon = GenerateMPolygonFromBorders(tr, variables.LaylistPlA[1], "Зданий");
                     }
                     catch (System.Exception)
                     {
                         System.Windows.MessageBox.Show("Проблема при создании региона из контура здания, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
                     }
-                    if (plotRegions != null)
+                    if (plotRegions != null && plotMPolygon != null)
                     {
-                        buildingRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Зданий");
+                        buildingRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatches, polylines, "Зданий");
                     }
                     //RoofBorder
                     try
                     {
                         plotRegions = GenerateRegionsFromBorders(tr, variables.RoofBorderLayerName, "Крыши");
+                        plotMPolygon = GenerateMPolygonFromBorders(tr, variables.RoofBorderLayerName, "Крыши");
+
                     }
                     catch (System.Exception)
                     {
                         System.Windows.MessageBox.Show("Проблема при создании региона из контура крыши, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
                     }
-                    if (plotRegions != null)
+                    if (plotRegions != null && plotMPolygon != null)
                     {
-                        buildingRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "Крыши");
+                        buildingRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatchesOnRoof, polylinesOnRoof, "Крыши");
                     }
                     //KindergartenBorder
                     try
                     {
                         plotRegions = GenerateRegionsFromBorders(tr, variables.LaylistPlA[2], "Детского сада");
+                        plotMPolygon = GenerateMPolygonFromBorders(tr, variables.LaylistPlA[2], "Детского сада");
                     }
                     catch (System.Exception)
                     {
                         System.Windows.MessageBox.Show("Проблема при создании региона из границы детсколго сада, проверьте полилинию.", "Сообщение", System.Windows.MessageBoxButton.OK);
                     }
-                    if (plotRegions != null)
+                    if (plotRegions != null && plotMPolygon != null)
                     {
-                        kindergartenRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatches, polylines, "Детского сада");
-                        kindergartenRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, hatchesOnRoof, polylinesOnRoof, "Детского сада");
+                        kindergartenRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatches, polylines, "Детского сада");
+                        kindergartenRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatchesOnRoof, polylinesOnRoof, "Детского сада");
                     }
                     //results
                     List<(Point3d, Point3d)> linesToDraw = new();
@@ -536,15 +544,40 @@ namespace StageProjectScripts.Functions
                 return null;
             }
         }
-        private (List<(Point3d, Point3d)>, List<Region>) CheckHatchesAndPolylinesForIntersectionsWithRegions(Variables variables, List<Region> plotRegions, List<Hatch>[] hatches, List<Polyline>[] polylinesForLines, string borderName)
+        private MPolygon GenerateMPolygonFromBorders(Transaction tr, string layer, string borderName, string plotNumber = null, string plotXref = null)
+        {
+            var borderLayer = plotNumber != null ? layer + plotNumber.Replace(':', '_') : layer;
+            List<Polyline> plotBorders = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, borderLayer, plotXref);
+            foreach (var item in plotBorders)
+            {
+                if (!item.Closed)
+                {
+                    System.Windows.MessageBox.Show($"Границы {borderName} должны быть замкнутыми, проверьте что все полилиниии границы замкнуты в свойствах", "Сообщение", System.Windows.MessageBoxButton.OK);
+                    return null;
+                }
+            }
+            if (plotBorders.Count != 0)
+            {
+                MPolygon mPolygon = new();
+                ObjectIdCollection plotBorderIds = new(plotBorders.Select(x => x.ObjectId).ToArray());
+                mPolygon.CreateLoopsFromBoundaries(plotBorderIds, true, Tolerance.Global.EqualPoint);
+                return mPolygon;
+            }
+            else
+            {
+                //System.Windows.MessageBox.Show($"На слое границ {borderName} нет полилиний", "Сообщение", System.Windows.MessageBoxButton.OK);
+                return null;
+            }
+        }
+        private (List<(Point3d, Point3d)>, List<Region>) CheckHatchesAndPolylinesForIntersectionsWithRegions(Variables variables, List<Region> plotRegions, MPolygon plotMPolygon, List<Hatch>[] hatches, List<Polyline>[] polylinesForLines, string borderName, double tolerance = 0)
         {
             List<(Point3d, Point3d)> errorLinePoints = new();
             List<Region> errorRegions = new();
             //Checking hatches
             for (var i = 0; i < hatches.Length; i++)
             {
-                int regErrors = 0;
-                var reg = CreateRegionsFromHatches(hatches[i], out regErrors);
+
+                var reg = CreateRegionsFromHatches(hatches[i], out _);
                 foreach (var r in reg)
                 {
                     var rOriginal = (Region)r.Clone();
@@ -554,7 +587,7 @@ namespace StageProjectScripts.Functions
                         {
                             r.BooleanOperation(BooleanOperationType.BoolSubtract, (Region)plReg.Clone());
                         }
-                        if (r.Area != 0 && r.Area != rOriginal.Area)
+                        if (r.Area != 0 && rOriginal.Area - r.Area > tolerance)
                         {
                             errorRegions.Add(r);
                         }
@@ -572,7 +605,7 @@ namespace StageProjectScripts.Functions
             {
                 foreach (var pl in polylinesForLines[i])
                 {
-                    if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Polyline>(pl), plotRegions) is var res && res != null)
+                    if (ArePointsOnBothSidesOfBorder(GetPointsFromObject<Polyline>(pl), plotMPolygon) is var res && res != null)
                     {
                         errorLinePoints.Add(((Point3d, Point3d))res);
                     }
@@ -1429,6 +1462,48 @@ namespace StageProjectScripts.Functions
             return result;
 
         }
+        private PointContainment GetPointContainment(MPolygon mPolygon, Point3d point)
+        {
+            if (mPolygon.NumMPolygonLoops > 1)
+            {
+                for (var i = 0; i < mPolygon.NumMPolygonLoops; i++)
+                {
+                    if (mPolygon.IsPointOnLoopBoundary(point, i, tolerance))
+                    {
+                        return PointContainment.OnBoundary;
+                    }
+                }
+            }
+            else
+            {
+                if (mPolygon.IsPointOnLoopBoundary(point, 0, tolerance))
+                {
+                    return PointContainment.OnBoundary;
+                }
+            }
+            var inside = PointContainment.Outside;
+            if (mPolygon.IsPointInsideMPolygon(point, Tolerance.Global.EqualPoint).Count > 0)
+            {
+                if (mPolygon.NumMPolygonLoops <= 1)
+                    inside = PointContainment.Inside;
+                else
+                {
+                    int inslooop = 0;
+                    for (int i = 0; i < mPolygon.NumMPolygonLoops; i++)
+                    {
+                        using (MPolygon mp = new MPolygon())
+                        {
+                            mp.AppendMPolygonLoop(mPolygon.GetMPolygonLoopAt(i), false, tolerance);
+                            if (mp.IsPointInsideMPolygon(point, tolerance).Count > 0) inslooop++;
+                        }
+                    }
+                    if (inslooop % 2 > 0)
+                        inside = PointContainment.Inside;
+                }
+            }
+            return inside;
+
+        }
         private PointContainment GetPointContainment(List<Region> regions, Point3d point)
         {
             List<PointContainment> resultsByRegion = new();
@@ -1547,6 +1622,46 @@ namespace StageProjectScripts.Functions
             foreach (var pt in points)
             {
                 results.Add(GetPointContainment(regions, pt));
+            }
+            if (results.Where(x => x == PointContainment.Outside).Count() > 0)
+            {
+                if (results.Where(x => x == PointContainment.Inside).Count() > 0)
+                {
+                    if (points.Count == 2)
+                    {
+                        return (points[0], points[1]);
+                    }
+                    else
+                    {
+                        PointContainment? sideFound = null;
+                        for (int i = 0; i < results.Count; i++)
+                        {
+                            if (sideFound != null && results[i] != PointContainment.OnBoundary && results[i] != sideFound)
+                            {
+                                return (points[i], points[i - 1]);
+                            }
+                            if (sideFound == null && results[i] != PointContainment.OnBoundary)
+                            {
+                                sideFound = results[i];
+                            }
+                        }
+                        return (points[results.Count - 2], points[results.Count - 1]);
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            return null;
+
+        }
+        private (Point3d, Point3d)? ArePointsOnBothSidesOfBorder(List<Point3d> points, MPolygon mPolygon)
+        {
+            List<PointContainment> results = new();
+            foreach (var pt in points)
+            {
+                results.Add(GetPointContainment(mPolygon, pt));
             }
             if (results.Where(x => x == PointContainment.Outside).Count() > 0)
             {
