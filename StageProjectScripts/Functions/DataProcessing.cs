@@ -386,7 +386,7 @@ namespace StageProjectScripts.Functions
                     }
                     if (plotRegions != null && plotMPolygon != null)
                     {
-                        buildingRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatches, polylines, "Зданий");
+                        buildingRegionResult = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatches, polylines, "Зданий", 0.01);
                     }
                     //RoofBorder
                     try
@@ -401,7 +401,7 @@ namespace StageProjectScripts.Functions
                     }
                     if (plotRegions != null && plotMPolygon != null)
                     {
-                        buildingRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatchesOnRoof, polylinesOnRoof, "Крыши");
+                        buildingRegionResultRoof = CheckHatchesAndPolylinesForIntersectionsWithRegions(variables, plotRegions, plotMPolygon, hatchesOnRoof, polylinesOnRoof, "Крыши", 0.01);
                     }
                     //KindergartenBorder
                     try
