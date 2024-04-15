@@ -858,16 +858,17 @@ namespace StageProjectScripts.Functions
                         return;
                     }
                     var plotRegions = CreateRegionsWithHoleSupport(plotBorders, "ГПЗУ");
+                    var plotPolygon = GenerateMPolygonFromBorders(tr, variables.PlotLayer, "ГПЗУ", plotNumber, plotXref);
 
                     CalculateAndFillHatchTable(variables, tr, xRef, plotRegions);
 
-                    CalculateAndFillPolylineLengthTable(variables, tr, xRef, plotRegions);
+                    CalculateAndFillPolylineLengthTable(variables, tr, xRef, plotRegions, plotPolygon);
 
                     CalculateAndFillPolylineAreaTable(variables, tr, xRef, plotRegions);
 
-                    CalculateAndFillNormalBlocksTable(variables, tr, plotRegions, xRef);
+                    CalculateAndFillNormalBlocksTable(variables, tr, plotPolygon, xRef);
 
-                    CalculateAndFillParamBlocksTable(variables, tr, plotRegions);
+                    CalculateAndFillParamBlocksTable(variables, tr, plotPolygon);
 
                     tr.Commit();
                 }
@@ -1018,8 +1019,21 @@ namespace StageProjectScripts.Functions
             }
             return elementsInside;
         }
+        private List<T> GetListOfElementsThatAreInsideRegion<T>(MPolygon polygon, List<T> elements)
+        {
+            List<T> elementsInside = new();
+            var areHatchesInside = AreObjectsInsidePlot<T>(polygon, elements);
+            for (var i = 0; i < elements.Count; i++)
+            {
+                if (areHatchesInside[i])
+                {
+                    elementsInside.Add(elements[i]);
+                }
+            }
+            return elementsInside;
+        }
 
-        private void CalculateAndFillParamBlocksTable(Variables variables, Transaction tr, List<Region> plotRegions)
+        private void CalculateAndFillParamBlocksTable(Variables variables, Transaction tr, MPolygon plotPolygon)
         {
             try
             {
@@ -1033,7 +1047,7 @@ namespace StageProjectScripts.Functions
                 var paramTableRow = 0;
                 for (var i = 0; i < variables.LaylistBlockWithParams.Length; i++)
                 {
-                    var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotRegions, blocksWithParams[i]);
+                    var areBlocksInside = AreObjectsInsidePlot<BlockReference>(plotPolygon, blocksWithParams[i]);
                     for (int j = 0; j < blocksWithParams[i].Count; j++)
                     {
                         var br = blocksWithParams[i][j];
@@ -1065,7 +1079,7 @@ namespace StageProjectScripts.Functions
                 System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK);
             }
         }
-        private void CalculateAndFillNormalBlocksTable(Variables variables, Transaction tr, List<Region> plotRegions, string xRef)
+        private void CalculateAndFillNormalBlocksTable(Variables variables, Transaction tr, MPolygon plotPolygon, string xRef)
         {
             try
             {
@@ -1078,18 +1092,18 @@ namespace StageProjectScripts.Functions
                 List<List<bool>> kindergartenAreBlocksInsideOnRoof = new();
 
                 var kindergartenBorder = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[2], xRef);
-                List<Region> kindergartenRegions = new();
+                MPolygon kindergartenPolygon = new();
                 if (kindergartenBorder != null && kindergartenBorder.Count > 0)
                 {
-                    kindergartenRegions = CreateRegionsWithHoleSupport(kindergartenBorder, "Детского сада");
+                    kindergartenPolygon = GenerateMPolygonFromBorders(tr, variables.LaylistPlA[2], "Детского сада", null, xRef);
                 }
                 var buildingBorder = _dataImport.GetAllElementsOfTypeOnLayer<Polyline>(tr, variables.LaylistPlA[1], xRef);
-                var buildingRegions = CreateRegionsWithHoleSupport(buildingBorder, "здания");
+                var buildingPolygon = GenerateMPolygonFromBorders(tr, variables.LaylistPlA[1], "Здания", null, xRef);
                 for (int i = 0; i < variables.LaylistBlockCount.Length; i++)
                 {
                     var blockPositions = _dataImport.GetBlocksPosition(tr, variables.LaylistBlockCount[i]);
 
-                    var areBlocksOnRoof = AreObjectsInsidePlot(buildingRegions, blockPositions);
+                    var areBlocksOnRoof = AreObjectsInsidePlot(buildingPolygon, blockPositions);
                     List<Point3d> blocksOnRoof = new();
                     List<Point3d> blocksNotOnRoof = new();
                     for (var j = 0; j < areBlocksOnRoof.Count; j++)
@@ -1110,7 +1124,7 @@ namespace StageProjectScripts.Functions
                         List<Point3d> blocksInsideKindergartenOnRoof = new();
                         List<Point3d> blocksInsideKindergartenNotOnRoof = new();
 
-                        var areBlocksInsideKindergarten = AreObjectsInsidePlot(kindergartenRegions, blocksNotOnRoof);
+                        var areBlocksInsideKindergarten = AreObjectsInsidePlot(kindergartenPolygon, blocksNotOnRoof);
                         for (var j = 0; j < areBlocksInsideKindergarten.Count; j++)
                         {
                             if (areBlocksInsideKindergarten[j])
@@ -1122,7 +1136,7 @@ namespace StageProjectScripts.Functions
                                 blocksOutsideKindergartenNotOnRoof.Add(blocksNotOnRoof[j]);
                             }
                         }
-                        var areBlocksInsideKindergartenOnRoof = AreObjectsInsidePlot(kindergartenRegions, blocksOnRoof);
+                        var areBlocksInsideKindergartenOnRoof = AreObjectsInsidePlot(kindergartenPolygon, blocksOnRoof);
                         for (var j = 0; j < blocksOnRoof.Count; j++)
                         {
                             if (areBlocksInsideKindergartenOnRoof[j])
@@ -1134,15 +1148,15 @@ namespace StageProjectScripts.Functions
                                 blocksOutsideKindergartenOnRoof.Add(blocksOnRoof[j]);
                             }
                         }
-                        normalAreBlocksInside.Add(AreObjectsInsidePlot(plotRegions, blocksOutsideKindergartenNotOnRoof));
-                        kindergartenAreBlocksInside.Add(AreObjectsInsidePlot(plotRegions, blocksInsideKindergartenNotOnRoof));
-                        normalAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotRegions, blocksOutsideKindergartenOnRoof));
-                        kindergartenAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotRegions, blocksInsideKindergartenOnRoof));
+                        normalAreBlocksInside.Add(AreObjectsInsidePlot(plotPolygon, blocksOutsideKindergartenNotOnRoof));
+                        kindergartenAreBlocksInside.Add(AreObjectsInsidePlot(plotPolygon, blocksInsideKindergartenNotOnRoof));
+                        normalAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotPolygon, blocksOutsideKindergartenOnRoof));
+                        kindergartenAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotPolygon, blocksInsideKindergartenOnRoof));
                     }
                     else
                     {
-                        normalAreBlocksInside.Add(AreObjectsInsidePlot(plotRegions, blocksNotOnRoof));
-                        normalAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotRegions, blocksOnRoof));
+                        normalAreBlocksInside.Add(AreObjectsInsidePlot(plotPolygon, blocksNotOnRoof));
+                        normalAreBlocksInsideOnRoof.Add(AreObjectsInsidePlot(plotPolygon, blocksOnRoof));
                     }
                 }
                 //Creating table data
@@ -1251,7 +1265,7 @@ namespace StageProjectScripts.Functions
             return dataElementModelList;
         }
 
-        private void CalculateAndFillPolylineLengthTable(Variables variables, Transaction tr, string xRef, List<Region> plotRegions)
+        private void CalculateAndFillPolylineLengthTable(Variables variables, Transaction tr, string xRef, List<Region> plotRegions, MPolygon plotPolygon)
         {
             try
             {
@@ -1274,7 +1288,7 @@ namespace StageProjectScripts.Functions
                 List<Polyline>[] polylinesForLinesKindergartenOnRoof = new List<Polyline>[variables.LaylistPlL.Length];
                 if (kindergartenBorders != null && kindergartenBorders.Count > 0)
                 {
-                    var kindergartenRegion = CreateRegionsWithHoleSupport(kindergartenBorders, "детского сада");
+                    var kindergartenRegion = GenerateMPolygonFromBorders(tr, variables.LaylistPlA[2], "Детского сада", null, xRef);
                     for (int i = 0; i < polylinesForLines.Length; i++)
                     {
                         polylinesForLinesKindergarten[i] = GetListOfElementsThatAreInsideRegion<Polyline>(kindergartenRegion, polylinesForLines[i]);
@@ -1294,13 +1308,13 @@ namespace StageProjectScripts.Functions
                 }
                 //Creating dataelement Models
                 int lineCounter = 0;
-                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLines, lineCounter));
+                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLines, lineCounter, plotPolygon));
                 lineCounter += polylinesForLines.Length;
-                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesKindergarten, lineCounter));
+                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesKindergarten, lineCounter, plotPolygon));
                 lineCounter += polylinesForLines.Length;
-                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesOnRoof, lineCounter));
+                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesOnRoof, lineCounter, plotPolygon));
                 lineCounter += polylinesForLines.Length;
-                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesKindergartenOnRoof, lineCounter));
+                plineLengthModelList.AddRange(CreateElementsModelListPolylines(variables, plotRegions, polylinesForLinesKindergartenOnRoof, lineCounter, plotPolygon));
                 //Filling Polyline length table
                 _dataExport.FillTableWithData(tr, plineLengthModelList, variables.Tpl, lineCounter + polylinesForLines.Length, "0");
             }
@@ -1310,7 +1324,7 @@ namespace StageProjectScripts.Functions
             }
         }
 
-        private List<DataElementModel> CreateElementsModelListPolylines(Variables variables, List<Region> plotRegions, List<Polyline>[] polylines, int startingLine)
+        private List<DataElementModel> CreateElementsModelListPolylines(Variables variables, List<Region> plotRegions, List<Polyline>[] polylines, int startingLine, MPolygon plotPolygon)
         {
             List<DataElementModel> plineLengthModelList = new();
             for (var i = 0; i < variables.LaylistPlL.Length; i++)
@@ -1318,7 +1332,7 @@ namespace StageProjectScripts.Functions
                 if (polylines[i] != null && polylines[i].Count > 0)
                 {
                     var plineLengths = polylines[i].Select(x => x.Length / variables.CurbLineCount[i]).ToList();
-                    var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotRegions, polylines[i]);
+                    var arePlinesInside = AreObjectsInsidePlot<Polyline>(plotPolygon, polylines[i]);
                     for (var j = 0; j < polylines[i].Count; j++)
                     {
                         plineLengthModelList.Add(new DataElementModel(plineLengths[j], i + startingLine, arePlinesInside[j]));
@@ -1615,6 +1629,57 @@ namespace StageProjectScripts.Functions
                 }
             }
         }
+        private bool ArePointsInsidePolyline(List<Point3d> points, MPolygon mPolygon, bool isPolyline = false, bool checkForIntersections = false)
+        {
+            List<PointContainment> results = new();
+            foreach (var pt in points)
+            {
+                results.Add(GetPointContainment(mPolygon, pt));
+            }
+            if (results.Where(x => x == PointContainment.Inside).Count() > 0)
+            {
+                if (results.Where(x => x == PointContainment.Outside).Count() > 0)
+                {
+                    if (checkForIntersections)
+                    {
+                        throw new System.Exception("Одна из полилиний или штриховок пересекает одну из границ, необходимо исправить.");
+                    }
+                    else
+                    {
+                        return (results.Where(x => x == PointContainment.Inside).Count() - results.Where(x => x == PointContainment.Outside).Count()) > 0;
+                    }
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            else if (results.Where(x => x == PointContainment.Outside).Count() > 0)
+            {
+                return false;
+            }
+            else
+            {
+                if (isPolyline)
+                {
+                    return true;
+                }
+                else
+                {
+                    double xCoord = 0;
+                    double yCoord = 0;
+                    int numberOfPoints = points.Count;
+                    for (int i = 0; i < numberOfPoints; i++)
+                    {
+                        xCoord += points[i].X / numberOfPoints;
+                        yCoord += points[i].Y / numberOfPoints;
+                    }
+                    var testPointIn = GetPointContainment(mPolygon, new Point3d(xCoord, yCoord, 0));
+
+                    return testPointIn == PointContainment.Inside;
+                }
+            }
+        }
         //Getting points that are on other side of plotBorder
         private (Point3d, Point3d)? ArePointsOnBothSidesOfBorder(List<Point3d> points, List<Region> regions)
         {
@@ -1724,6 +1789,41 @@ namespace StageProjectScripts.Functions
                 else
                 {
                     if (ArePointsInsidePolyline(GetPointsFromObject(item), plotRegions, false, checkForIntersections))
+                    {
+                        tempResult = true;
+                    }
+                }
+                results.Add(tempResult);
+            }
+            return results;
+        }
+        private List<bool> AreObjectsInsidePlot<T>(MPolygon plotPolygon, List<T> objects, bool checkForIntersections = true)
+        {
+            if (objects == null)
+            {
+                return null;
+            }
+            List<bool> results = new();
+            foreach (var item in objects)
+            {
+                var tempResult = false;
+                if (item is Point3d point)
+                {
+                    if (ArePointsInsidePolyline(new List<Point3d>() { point }, plotPolygon))
+                    {
+                        tempResult = true;
+                    }
+                }
+                else if (item is Polyline)
+                {
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotPolygon, true, checkForIntersections))
+                    {
+                        tempResult = true;
+                    }
+                }
+                else
+                {
+                    if (ArePointsInsidePolyline(GetPointsFromObject(item), plotPolygon, false, checkForIntersections))
                     {
                         tempResult = true;
                     }
